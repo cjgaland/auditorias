@@ -935,3 +935,32 @@ body.ver-informe .doc-prev { border: 0; box-shadow: none; padding: 0; }
 body.ver-informe .doc-salto { border: 0; margin: 0; break-after: page; }
 @media print { .doc-prev { border: 0; box-shadow: none; padding: 0; } .doc-salto { border: 0; margin: 0; break-after: page; } .doc-t tr { break-inside: avoid; } }
 @media (max-width: 560px) { .crono-nom { min-width: 112px; max-width: 132px; padding: 5px 6px !important; } .crono-nom b { font-size: 12px; } .crono { min-width: 560px; } .crono-c { height: 28px; } }
+
+/* ============================================================
+   Entrega 3 · Diseño de la auditoría y pilotaje
+   ============================================================ */
+.crit-txt { margin: -2px 0 8px; font-size: 14px; color: var(--text-2); }
+.lq-est { margin: 4px 0 0; font-size: 15px; } .lq-est span { font-size: 12.5px; color: var(--text-3); }
+.lq-ops { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.lq-op { display: grid; gap: 1px; padding: 7px 8px; border-radius: 10px; border: 1.5px solid var(--border-lite); background: var(--bg); color: var(--text-1); font: inherit; text-align: left; }
+.lq-op b { font-size: 15px; } .lq-op span { font-size: 12px; color: var(--text-2); }
+.lq-op:hover { border-color: var(--cyan); }
+.lq-op.active { border-color: var(--cyan); background: var(--cyan-dim); box-shadow: 0 0 0 2px var(--cyan-glow); }
+.muestra-res { margin: 8px 0; padding: 10px 12px; border-radius: 10px; background: var(--pH-dim); border: 1px solid var(--pH); color: var(--text-1); font-size: 14.5px; }
+.sorteo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.sorteo-num { margin: 4px 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg-3); font-family: var(--mono); font-size: 13.5px; line-height: 1.7; word-spacing: 2px; }
+.pil-tabla { display: grid; gap: 4px; margin: 6px 0 8px; }
+.pil-fila { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 6px; align-items: center; }
+.pil-cab { font-size: 12px; font-weight: 800; color: var(--text-3); text-transform: uppercase; letter-spacing: .3px; }
+.pil-fila > span:first-child { text-align: center; font-weight: 700; color: var(--text-2); }
+.pil-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1.5px solid var(--border-lite); border-radius: 9px; overflow: hidden; }
+.pil-seg button { padding: 7px 0; border: 0; background: var(--bg); color: var(--text-2); font: 700 13px var(--font); }
+.pil-seg button + button { border-left: 1px solid var(--border); }
+.pil-seg button.active { background: var(--cyan); color: #fff; }
+:root[data-tema="oscuro"] .pil-seg button.active { color: #06231f; }
+.pil-ok { text-align: center; } .pil-ok .ok { color: var(--green); } .pil-ok .mal { color: var(--red); }
+.pil-res { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 10px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg-3); font-size: 14px; }
+.pil-res p { flex-basis: 100%; margin: 2px 0 0; font-size: 13.5px; }
+.pil-res--bueno { border-color: var(--green); background: var(--green-dim); }
+.pil-res--aceptable { border-color: var(--amber); background: var(--amber-dim); }
+.pil-res--bajo { border-color: var(--red); background: var(--red-dim); }

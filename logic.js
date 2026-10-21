@@ -159,14 +159,14 @@
     return { id, subproceso: "", fallo: "", efecto: "", causa: "", g: "", o: "", d: "", medidas: "", clave: false, accion: "", evidencia: "", motivo: "" };
   }
   function nuevoCriterio(id) {
-    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "" };
+    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "", ind: nuevoInd(), evid: nuevaEvid(), muestra: nuevaMuestra(), piloto: nuevoPiloto() };
   }
   function nuevaAuditoria(id, fecha) {
     return {
       id, titulo: "", unidad: "", proceso: "", centro: "",
       origen: { tipo: "", mapaId: "", riesgoIds: [], detalle: "" },
       tipo: "interna", objeto: "proceso", introduccion: "", objetivoGeneral: "", objetivosEsp: "", alcance: "",
-      planId: "", entradaId: "", hitos: nuevosHitos(),
+      planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(),
       criterios: [], creado: fecha, modificado: fecha
     };
   }
@@ -247,7 +247,229 @@
     if (conClaveSinAud) return { k: "auditar", texto: `Ya tienes hallazgos clave en «${corto(conClaveSinAud.nombre || "tu mapa", 50)}». Crea la auditoría que los va a comprobar.`, href: "#/auditoria/nueva?mapa=" + conClaveSinAud.id, btn: "Crear la auditoría" };
     const incompleta = auds.find(a => { const p = progresoInicio(a); return p.hechos < p.total; });
     if (incompleta) return { k: "completar", texto: `Completa los datos de inicio de «${corto(incompleta.titulo || "tu auditoría", 50)}»: origen, unidad, objetivo y subprocesos.`, href: "#/auditoria/" + incompleta.id, btn: "Seguir con la auditoría" };
-    return { k: "diseno", texto: "Tienes el punto de partida y la planificación listos. El siguiente paso será el diseño de cada auditoría (indicadores, evidencias, instrumentos y muestra), que llegará en la próxima versión. Mientras, repasa «Aprende».", href: "#/aprende/3", btn: "Repasar indicadores" };
+    const sinDiseno = auds.find(a => { const g = progresoDiseno(a); return ![1, 2, 3, 4].every(k => g[k]); });
+    if (sinDiseno) { const g = progresoDiseno(sinDiseno), paso = [1, 2, 3, 4].find(k => !g[k]); return { k: "disenar", texto: `Diseña «${corto(sinDiseno.titulo || "tu auditoría", 50)}»: te falta ${["", "un indicador por criterio", "elegir evidencias e instrumentos", "calcular la muestra", "la metodología y el equipo"][paso]}.`, href: `#/auditoria/${sinDiseno.id}/diseno/${paso}`, btn: "Seguir con el diseño" }; }
+    const sinPiloto = auds.find(a => !progresoDiseno(a)[5]);
+    if (sinPiloto) return { k: "pilotar", texto: `Antes de recoger datos en «${corto(sinPiloto.titulo || "tu auditoría", 50)}», pilota la hoja de recogida con dos auditores en 5–10 casos.`, href: `#/auditoria/${sinPiloto.id}/diseno/5`, btn: "Hacer el pilotaje" };
+    return { k: "recogida", texto: "Tus auditorías están diseñadas y pilotadas. Descarga la hoja de recogida y empieza a revisar casos; la pantalla de recogida y el informe llegarán en las próximas versiones.", href: "#/auditorias", btn: "Ver mis auditorías" };
+  }
+
+  // ---------- Diseño de la auditoría (entrega 3) ----------
+  const TIPOS_IND = {
+    estructura: { nom: "Estructura", que: "Lo que se tiene (recursos, medios)" },
+    proceso: { nom: "Proceso", que: "Lo que se hace (si se aplica el protocolo)" },
+    resultado: { nom: "Resultado", que: "Lo que se logra (efecto en el paciente)" }
+  };
+  const EVIDENCIAS = {
+    documental: { nom: "Documental", que: "Historias clínicas, protocolos, hojas de verificación, informes." },
+    observacion: { nom: "Observación directa", que: "Ver la práctica real in situ (higiene de manos, identificación…)." },
+    entrevista: { nom: "Entrevistas", que: "Profesionales, pacientes o familiares: aportan el porqué." },
+    registros: { nom: "Registros electrónicos", que: "Sistemas de información, bases de datos, aplicaciones corporativas." }
+  };
+  const PRINCIPIOS = {
+    veracidad: "Veracidad y pertinencia", trazabilidad: "Trazabilidad", relevancia: "Relevancia",
+    fiabilidad: "Fiabilidad de las fuentes", imparcialidad: "Imparcialidad", confidencialidad: "Confidencialidad"
+  };
+  const INSTRUMENTOS = {
+    checklist: { nom: "Lista de verificación", que: "Puntos a revisar uno a uno (Sí / No / No aplica)." },
+    observacion: { nom: "Observación estructurada", que: "Guion u hoja para anotar de forma objetiva lo que se ve." },
+    entrevista: { nom: "Guía de entrevista", que: "Preguntas preparadas de antemano." },
+    matriz: { nom: "Matriz de hallazgos", que: "Tabla con cada hallazgo, su evidencia y su gravedad." },
+    registroNC: { nom: "Registro de no conformidades", que: "Desviaciones con su evidencia y, si se conoce, su causa." }
+  };
+  const OBJETIVOS_MUESTRA = {
+    decidir: { nom: "Decidir (LQAS)", que: "¿Se alcanza el estándar o hay que investigar? Pocos casos (15–35). Un semáforo, no una báscula." },
+    estimar: { nom: "Estimar el %", que: "Conocer el porcentaje de cumplimiento con un margen de error. Más casos (97 con ±10 %)." },
+    practica: { nom: "Regla práctica", que: "Unas 50 historias (mínimo 30) al azar, sin cálculo. Solo detecta cambios grandes." },
+    todos: { nom: "Todos los casos", que: "Cuando son pocos o un solo caso ya es grave (indicadores centinela)." }
+  };
+  const METODOS_SEL = {
+    aleatorio: { nom: "Aleatorio simple", que: "Se numera el listado y se sortean números." },
+    sistematico: { nom: "Sistemático", que: "Un caso cada k = N ÷ n, tras un arranque al azar. Cuidado si el listado tiene patrones." },
+    estratificado: { nom: "Estratificado", que: "Se sortea dentro de cada grupo (turno, unidad) para que todos estén representados." }
+  };
+
+  const nuevoInd = () => ({ nombre: "", tipo: "", numerador: "", denominador: "", sentido: "mas", estandar: "", fuente: "", exclusiones: "", cumpleSi: "", noAplicaSi: "" });
+  const nuevaEvid = () => ({ tipos: [], triangulacion: "", principios: [], instrumentos: [], justificacion: "" });
+  const nuevaMuestra = () => ({ objetivo: "", N: "", e: "10", p: "50", beta: "20", umbral: "", n: "", metodo: "", unidad: "", sorteo: [] });
+  const nuevoPiloto = () => ({ pares: [], nota: "" });
+  const nuevoDiseno = () => ({ poblacion: "", periodo: "", fuentes: "", equipo: "", recursos: "", metodologia: "" });
+
+  const pctNum = v => { const n = num(String(v || "").replace("%", "")); return Number.isFinite(n) ? n : NaN; };
+  function formulaInd(ind) {
+    if (!lleno(ind.numerador) && !lleno(ind.denominador)) return "";
+    return `(${lleno(ind.numerador) ? ind.numerador.trim() : "numerador"} ÷ ${lleno(ind.denominador) ? ind.denominador.trim() : "denominador"}) × 100`;
+  }
+  function textoEstandar(ind) {
+    const v = pctNum(ind.estandar); if (!Number.isFinite(v)) return "";
+    return `${ind.sentido === "menos" ? "≤" : "≥"} ${nfmt(v, 1)} %`;
+  }
+  // El estándar expresado siempre en cumplimientos (las tablas LQAS cuentan cumplimientos)
+  function estandarCumplimiento(ind) {
+    const v = pctNum(ind.estandar); if (!Number.isFinite(v)) return NaN;
+    return ind.sentido === "menos" ? 100 - v : v;
+  }
+
+  // Tamaño para estimar un porcentaje: n = z² p (1 − p) / e², con corrección por universo finito
+  function tamEstimar(e, p, N) {
+    const ee = pctNum(e) / 100, pp = Number.isFinite(pctNum(p)) ? pctNum(p) / 100 : 0.5, NN = num(N);
+    if (!(ee > 0 && ee < 1) || !(pp > 0 && pp < 1)) return null;
+    const n0 = 1.96 * 1.96 * pp * (1 - pp) / (ee * ee);
+    const n = Number.isFinite(NN) && NN > 0 ? n0 / (1 + (n0 - 1) / NN) : n0;
+    return { n0, n: Math.ceil(n - 1e-9), corregida: Number.isFinite(NN) && NN > 0 };
+  }
+  const margenError = (p, n) => n > 0 ? 1.96 * Math.sqrt(p * (1 - p) / n) : NaN;
+
+  // Tablas de Lemeshow (adaptadas por Saturno). Filas: umbral 10–85 %; columnas: estándar 50–95 %. «n/c»; «-» = no aplicable
+  const LQ_COLS = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95];
+  const LQ = {
+    "20": {
+      10: "8/1 6/1 5/1", 15: "11/2 8/2 7/2 5/1", 20: "15/4 11/3 9/2 7/2 5/1", 25: "23/7 16/5 12/4 9/3 7/2 5/2",
+      30: "37/13 24/9 16/6 12/5 9/4 6/2 5/2", 35: "67/26 38/15 24/10 16/7 11/5 8/3 6/3",
+      40: "153/66 68/30 38/17 23/11 16/8 11/5 8/4 5/2", 45: "617/288 154/74 67/33 37/19 22/11 15/8 10/5 7/4 5/3",
+      50: "- 615/317 151/80 65/35 35/20 21/12 13/8 9/5 6/4", 55: "- - 600/340 145/84 62/37 32/19 19/12 12/8 7/4",
+      60: "- - - 573/353 136/86 57/37 29/19 16/11 10/7 5/3", 65: "- - - - 534/356 125/85 50/35 25/18 13/9 7/5",
+      70: "- - - - - 483/346 109/80 43/32 20/15 9/7", 75: "- - - - - - 419/321 91/71 33/26 14/11",
+      80: "- - - - - - - 342/279 69/58 22/19", 85: "- - - - - - - - 253/219 44/39"
+    },
+    "10": {
+      10: "10/2 8/2 6/1 5/1", 15: "14/3 11/3 8/2 7/2 5/1", 20: "20/6 15/5 11/3 9/3 7/2 5/2", 25: "31/10 21/7 16/6 12/5 9/4 7/3 5/2",
+      30: "50/19 32/12 22/9 16/7 12/5 9/4 7/3 5/2", 35: "92/38 52/22 33/15 22/10 16/8 11/5 8/4 6/3 5/3",
+      40: "211/93 93/43 52/25 32/16 22/11 15/8 11/6 8/5 6/4", 45: "853/402 212/104 93/48 51/27 31/17 21/12 14/8 10/6 7/4",
+      50: "- 852/444 210/114 91/51 49/29 30/18 19/12 13/8 9/6 5/3", 55: "- - 834/477 203/120 87/53 46/29 27/18 17/12 11/8 7/5",
+      60: "- - - 798/496 191/123 80/53 42/29 24/17 14/10 8/6", 65: "- - - - 746/501 176/122 72/52 36/27 20/15 11/9",
+      70: "- - - - - 676/488 156/116 62/48 30/24 15/12", 75: "- - - - - - 589/455 131/104 49/40 21/18",
+      80: "- - - - - - - 484/398 102/86 34/30", 85: "- - - - - - - - 362/316 67/60"
+    }
+  };
+  function lqas(estandar, umbral, beta) {
+    const t = LQ[String(beta) === "10" ? "10" : "20"], ci = LQ_COLS.indexOf(estandar), fila = t[umbral];
+    if (ci < 0 || !fila) return null;
+    const celda = fila.split(" ")[ci];
+    if (!celda || celda === "-") return null;
+    const [n, c] = celda.split("/").map(Number);
+    return { n, c };
+  }
+  // Para un estándar: todas las líneas rojas posibles con su n y su c (la «chuleta»)
+  function opcionesLqas(estandar, beta) {
+    return Object.keys(LQ["20"]).map(Number).filter(u => u < estandar).map(u => Object.assign({ umbral: u }, lqas(estandar, u, beta) || {})).filter(x => x.n).sort((a, b) => b.umbral - a.umbral);
+  }
+  // Estado de la muestra de un criterio: n, c y avisos
+  function calcMuestra(c) {
+    const m = c.muestra, ind = c.ind, N = num(m.N), avisos = [];
+    const res = { n: NaN, c: NaN, texto: "", avisos };
+    if (m.objetivo === "todos") { res.n = Number.isFinite(N) ? N : NaN; res.texto = Number.isFinite(N) ? `Todos los casos (${N})` : "Todos los casos"; return res; }
+    if (m.objetivo === "practica") {
+      res.n = Number.isFinite(N) && N < 50 ? N : 50; res.texto = `${res.n} casos al azar (regla práctica)`;
+      if (Number.isFinite(N) && N <= 50) avisos.push({ nivel: "nota", texto: "El universo es pequeño: revisa todos los casos." });
+      avisos.push({ nivel: "nota", texto: "Con la regla práctica no hay cálculo: el resultado tendrá un margen de error de unos ±14 puntos con 50 casos. Sirve para detectar cambios grandes." });
+      return res;
+    }
+    if (m.objetivo === "estimar") {
+      const t = tamEstimar(m.e, m.p, m.N);
+      if (!t) { avisos.push({ nivel: "error", texto: "El margen de error y el porcentaje esperado deben estar entre 1 y 99." }); return res; }
+      res.n = t.n; res.texto = `${t.n} casos para estimar con ±${nfmt(pctNum(m.e), 1)} % (95 % de confianza)${t.corregida ? `, universo de ${nfmt(N)}` : ""}`;
+      if (Number.isFinite(N) && t.n >= N) avisos.push({ nivel: "nota", texto: "La muestra sale igual o mayor que el universo: revisa todos los casos." });
+      return res;
+    }
+    if (m.objetivo === "decidir") {
+      const est = estandarCumplimiento(ind);
+      if (!Number.isFinite(est)) { avisos.push({ nivel: "nota", texto: "Escribe el estándar del indicador (paso de indicadores) para buscar el plan LQAS." }); return res; }
+      if (est >= 100) { avisos.push({ nivel: "warn", texto: "Con un estándar del 100 % (o 0 % de fallos) no hay plan LQAS: un solo fallo ya incumple. Revisa todos los casos, o fija un estándar realista (p. ej. 95 %) y vigila los fallos uno a uno." }); return res; }
+      if (LQ_COLS.indexOf(est) < 0) { avisos.push({ nivel: "warn", texto: `Las tablas LQAS van de 5 en 5 (50 %, 55 %… 95 %, en cumplimiento). Tu estándar equivale a ${nfmt(est, 1)} % de cumplimiento: usa el valor de la tabla más próximo.` }); return res; }
+      const u = pctNum(m.umbral);
+      if (!Number.isFinite(u)) { avisos.push({ nivel: "nota", texto: "Elige la línea roja (umbral): el nivel por debajo del cual la situación es claramente mala." }); return res; }
+      const r = lqas(est, u, m.beta);
+      if (!r) { avisos.push({ nivel: "warn", texto: "Esa combinación de estándar y umbral no está en la tabla. El umbral debe estar por debajo del estándar." }); return res; }
+      res.n = r.n; res.c = r.c; res.texto = `Revisar ${r.n} casos: si cumplen ${r.c} o más, se acepta; si cumplen ${r.c - 1} o menos, hay que investigar`;
+      if (Number.isFinite(N) && r.n > N * 0.1) avisos.push({ nivel: N < r.n ? "warn" : "nota", texto: N < r.n ? `El plan pide ${r.n} casos y el universo solo tiene ${N}: revisa todos o sube la línea roja… o mejor, baja la exigencia del umbral.` : `La muestra (${r.n}) supera el 10 % del lote (${N}). El LQAS funciona mejor con lotes grandes; con lotes pequeños, el resultado es aproximado.` });
+      return res;
+    }
+    return res;
+  }
+
+  // Sorteo de los casos: devuelve los números del listado (1…N) que hay que revisar
+  function sortear(N, n, metodo, rnd = Math.random) {
+    N = Math.floor(num(N)); n = Math.floor(num(n));
+    if (!(N > 0) || !(n > 0)) return [];
+    if (n >= N) return Array.from({ length: N }, (_, i) => i + 1);
+    if (metodo === "sistematico") {
+      const k = Math.floor(N / n), ini = 1 + Math.floor(rnd() * k);
+      return Array.from({ length: n }, (_, i) => ini + i * k);
+    }
+    const a = Array.from({ length: N }, (_, i) => i + 1);
+    for (let i = 0; i < n; i++) { const j = i + Math.floor(rnd() * (N - i)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a.slice(0, n).sort((x, y) => x - y);
+  }
+
+  // Pilotaje: concordancia entre dos auditores con los mismos casos (Sí / No / No aplica)
+  function concordancia(pares) {
+    const v = pares.filter(p => lleno(p.a) && lleno(p.b));
+    const n = v.length;
+    if (!n) return { n: 0 };
+    const cats = ["si", "no", "na"], acuerdos = v.filter(p => p.a === p.b).length, po = acuerdos / n;
+    const pe = cats.reduce((s, k) => s + (v.filter(p => p.a === k).length / n) * (v.filter(p => p.b === k).length / n), 0);
+    const kappa = pe >= 1 ? (po === 1 ? 1 : 0) : (po - pe) / (1 - pe);
+    const nivel = po >= 0.9 && kappa >= 0.6 ? "bueno" : po >= 0.8 && kappa >= 0.4 ? "aceptable" : "bajo";
+    const texto = n < 5 ? "Con menos de 5 casos el pilotaje dice poco: revisa al menos 5–10." :
+      nivel === "bueno" ? "Buena concordancia: el criterio está bien definido. Se puede empezar." :
+      nivel === "aceptable" ? "Concordancia aceptable. Revisad juntos los casos en que no coincidís y aclarad la definición de «cumple»." :
+      "Concordancia baja: el criterio no está claro. Antes de recoger datos, reescribid «cumple si…» y «no aplica si…» y repetid el pilotaje.";
+    return { n, acuerdos, pct: po * 100, kappa, nivel, texto, pocos: n < 5 };
+  }
+
+  function avisosDiseno(aud) {
+    const A = [], C = aud.criterios, nom = (c, i) => `Criterio ${i + 1}`;
+    if (!C.length) { A.push({ nivel: "nota", paso: 1, texto: "La auditoría no tiene criterios todavía: añádelos en el paso de Inicio." }); return A; }
+    C.forEach((c, i) => {
+      const ind = c.ind;
+      if (!lleno(ind.nombre)) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: falta el nombre del indicador.` });
+      if (lleno(ind.nombre) && (!lleno(ind.numerador) || !lleno(ind.denominador))) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: define numerador y denominador; si no, cada auditor contará distinto.` });
+      if (lleno(ind.nombre) && !lleno(ind.estandar)) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: sin estándar no se puede decir si cumple o no.` });
+      const est = pctNum(ind.estandar);
+      if (Number.isFinite(est) && (est < 0 || est > 100)) A.push({ nivel: "error", paso: 1, texto: `${nom(c, i)}: el estándar es un porcentaje entre 0 y 100.` });
+      if (Number.isFinite(est) && ind.sentido === "mas" && est < 50) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: estándar ≥ ${est} %. ¿Seguro que no cuentas fallos? Si el indicador cuenta errores, el sentido es «menos es mejor» (≤).` });
+      if (Number.isFinite(est) && ind.sentido === "menos" && est > 50) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: estándar ≤ ${est} %. ¿Seguro que cuentas fallos? Si cuentas aciertos, el sentido es «más es mejor» (≥).` });
+      if (lleno(ind.nombre) && !lleno(ind.cumpleSi)) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: escribe «cumple si…». Es lo que hace que dos auditores lleguen al mismo resultado.` });
+      const ev = c.evid;
+      if (!ev.tipos.length) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: elige al menos un tipo de evidencia.` });
+      else if (ev.tipos.length === 1) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: una sola fuente de evidencia. Si puedes, triangula con otra (lo registrado frente a lo observado o lo que cuentan los profesionales).` });
+      if (ev.tipos.length && !ev.instrumentos.length) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: elige el instrumento de recogida.` });
+      if (ev.tipos.includes("observacion") && !ev.instrumentos.includes("observacion") && !ev.instrumentos.includes("checklist")) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: para la observación directa conviene una observación estructurada o una lista de verificación.` });
+      if (ev.tipos.includes("entrevista") && !ev.instrumentos.includes("entrevista")) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: para las entrevistas conviene una guía de entrevista.` });
+      if (!lleno(c.muestra.objetivo)) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige cómo se calcula la muestra (decidir, estimar, regla práctica o todos).` });
+      else calcMuestra(c).avisos.filter(a => a.nivel !== "nota").forEach(a => A.push({ nivel: a.nivel, paso: 3, texto: `${nom(c, i)}: ${a.texto}` }));
+      if (lleno(c.muestra.objetivo) && c.muestra.objetivo !== "todos" && !lleno(c.muestra.metodo)) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige cómo se seleccionan los casos al azar.` });
+      const k = concordancia(c.piloto.pares);
+      if (k.n && !k.pocos && k.nivel === "bajo") A.push({ nivel: "warn", paso: 5, texto: `${nom(c, i)}: concordancia baja en el pilotaje (${nfmt(k.pct, 0)} %). Aclara la definición antes de recoger datos.` });
+    });
+    if (!lleno(aud.diseno.periodo)) A.push({ nivel: "nota", paso: 4, texto: "Indica el periodo auditado (de qué fechas son los casos)." });
+    if (!lleno(aud.diseno.equipo)) A.push({ nivel: "nota", paso: 4, texto: "Indica quién forma el equipo auditor." });
+    if (!C.some(c => c.piloto.pares.some(p => lleno(p.a) && lleno(p.b)))) A.push({ nivel: "nota", paso: 5, texto: "Aún no has hecho ningún pilotaje. Prueba la hoja con dos auditores en 5–10 casos antes de empezar." });
+    return A;
+  }
+  function progresoDiseno(aud) {
+    const C = aud.criterios, todos = f => C.length > 0 && C.every(f);
+    return {
+      1: todos(c => lleno(c.ind.nombre) && lleno(c.ind.numerador) && lleno(c.ind.denominador) && lleno(c.ind.estandar)),
+      2: todos(c => c.evid.tipos.length > 0 && c.evid.instrumentos.length > 0),
+      3: todos(c => lleno(c.muestra.objetivo) && Number.isFinite(calcMuestra(c).n)),
+      4: lleno(aud.diseno.periodo) && lleno(aud.diseno.equipo),
+      5: C.some(c => concordancia(c.piloto.pares).n >= 5)
+    };
+  }
+
+  // Importar indicadores desde una copia de la app Indicadores
+  function indicadoresDeCopia(o) {
+    if (!o || typeof o !== "object" || !Array.isArray(o.indicadores)) return null;
+    const t = v => (typeof v === "string" || typeof v === "number") ? String(v).slice(0, 1000) : "";
+    return o.indicadores.slice(0, 300).filter(x => x && typeof x === "object" && lleno(x.nombre)).map(x => ({
+      nombre: t(x.nombre), tipo: TIPOS_IND[x.tipo] ? x.tipo : "", numerador: t(x.numerador), denominador: t(x.denominador),
+      sentido: x.sentido === "menos" ? "menos" : "mas", estandar: t(x.estandar).replace(/[^\d.,]/g, ""),
+      fuente: [...(Array.isArray(x.fuentes) ? x.fuentes.map(t) : []), t(x.fuenteOtra)].filter(lleno).join(", "),
+      exclusiones: [t(x.poblacion), lleno(x.exclusiones) ? "Excluye: " + t(x.exclusiones) : ""].filter(lleno).join(". "),
+      cumpleSi: t(x.terminos), noAplicaSi: "", _sub: t(x.subproceso), _hallazgo: t(x.hallazgo)
+    }));
   }
 
   // ---------- Hitos de la auditoría (mejora A) ----------
@@ -502,6 +724,75 @@
     return { titulo: "Mapa de Riesgos" + (lleno(mapa.nombre) ? " · " + mapa.nombre : ""), bloques: B };
   }
 
+  // Plan específico de una auditoría (estructura del modelo de auditoría interna)
+  const lineas = t => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
+  const textoMuestraCorto = c => { const m = c.muestra, r = calcMuestra(c); if (!lleno(m.objetivo)) return ""; if (m.objetivo === "decidir" && Number.isFinite(r.c)) return `LQAS: n = ${r.n}, c = ${r.c} (umbral ${m.umbral} %, β ${m.beta} %)`; return r.texto; };
+  function documentoPlanEspecifico(aud, mapa, plan, fecha) {
+    const C = aud.criterios, D = aud.diseno, subs = [...new Set(C.map(c => c.subproceso).filter(lleno))];
+    const B = [{ t: "portada", titulo: aud.titulo || "Plan de auditoría", sub: "Plan específico de auditoría", extra: [aud.unidad, aud.centro, lleno(D.periodo) ? "Periodo auditado: " + D.periodo : "", "Fecha: " + fecha].filter(lleno) }];
+    B.push(...bloquesControl(aud.control), { t: "salto" });
+    B.push({ t: "h1", texto: "1. Introducción" });
+    const o = ORIGENES[aud.origen.tipo];
+    B.push({ t: "p", texto: lleno(aud.introduccion) ? aud.introduccion : `Este documento recoge el diseño de la auditoría ${aud.tipo === "externa" ? "externa" : "interna"} ${lleno(aud.proceso) ? deArt(aud.proceso) : ""}${lleno(aud.unidad) ? " en " + aud.unidad : ""}.${o ? " Su origen: " + o.nom.toLowerCase() + "." : ""}` });
+    if (lleno(aud.origen.detalle)) B.push({ t: "p", texto: aud.origen.detalle });
+    if (plan) { const en = plan.entradas.find(e => e.id === aud.entradaId); B.push({ t: "p", texto: `Forma parte del Plan Anual de Auditorías ${plan.anio}${en && en.meses.length ? " (" + textoMeses(en.meses).toLowerCase() + ")" : ""}.` }); }
+    B.push({ t: "h1", texto: "2. Objetivos" });
+    B.push({ t: "p", runs: [{ texto: "Objetivo general. ", negrita: true }, { texto: aud.objetivoGeneral || "—" }] });
+    if (lineas(aud.objetivosEsp).length) { B.push({ t: "p", runs: [{ texto: "Objetivos específicos:", negrita: true }] }); B.push({ t: "lista", items: lineas(aud.objetivosEsp) }); }
+    B.push({ t: "h1", texto: "3. Alcance" });
+    if (lleno(aud.alcance)) B.push({ t: "p", texto: aud.alcance });
+    if (subs.length) { B.push({ t: "p", texto: `Subprocesos auditados (${subs.length}):` }); B.push({ t: "lista", items: subs }); }
+    B.push({ t: "h1", texto: "4. Criterios e indicadores" });
+    B.push({ t: "h2", texto: "4.1. Criterios de auditoría" });
+    B.push({ t: "tabla", cab: ["Nº", "Subproceso", "Criterio de auditoría"], anchos: [6, 28, 66], filas: C.map((c, i) => [{ texto: String(i + 1), centro: true }, c.subproceso, c.criterio]) });
+    B.push({ t: "h2", texto: "4.2. Indicadores de evaluación" });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Hallazgo", "Indicador", "Tipo", "Fórmula", "Estándar", "Fuente de datos"], anchos: [4, 16, 22, 9, 22, 9, 18], filas: C.map((c, i) => [{ texto: String(i + 1), centro: true }, c.hallazgo, { texto: c.ind.nombre, negrita: true }, TIPOS_IND[c.ind.tipo] ? TIPOS_IND[c.ind.tipo].nom : "", formulaInd(c.ind), { texto: textoEstandar(c.ind), centro: true }, c.ind.fuente]) });
+    B.push({ t: "h2", texto: "4.3. Cuándo se considera que cumple" });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Cumple si…", "No aplica si…", "Población y exclusiones"], anchos: [4, 42, 27, 27], filas: C.map((c, i) => [{ texto: String(i + 1), centro: true }, c.ind.cumpleSi, c.ind.noAplicaSi, c.ind.exclusiones]) });
+    B.push({ t: "h1", texto: "5. Metodología" });
+    const instr = [...new Set(C.flatMap(c => c.evid.instrumentos))].map(k => INSTRUMENTOS[k].nom).join(", ");
+    const fila = (k, v) => lleno(v) ? [[{ texto: k, negrita: true, fondo: "F1F5F9" }, v]] : [];
+    B.push({ t: "tabla", sinCab: true, anchos: [28, 72], filas: [...fila("Tipo de auditoría", `${TIPOS_AUD[aud.tipo]}, ${OBJETOS_AUD[aud.objeto].nom.toLowerCase()}`), ...fila("Población", D.poblacion), ...fila("Periodo auditado", D.periodo), ...fila("Fuentes de información", D.fuentes), ...fila("Instrumentos de recogida", instr ? instr + ". Respuesta cerrada: Sí / No / No aplica." : ""), ...fila("Método", D.metodologia)] });
+    B.push({ t: "h2", texto: "5.1. Muestra y selección de casos" });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Unidad de estudio", "Universo (N)", "Cómo se calcula", "Casos y regla", "Selección"], anchos: [4, 20, 10, 14, 32, 20], filas: C.map((c, i) => [{ texto: String(i + 1), centro: true }, c.muestra.unidad, { texto: c.muestra.N, centro: true }, OBJETIVOS_MUESTRA[c.muestra.objetivo] ? OBJETIVOS_MUESTRA[c.muestra.objetivo].nom : "", calcMuestra(c).texto, METODOS_SEL[c.muestra.metodo] ? METODOS_SEL[c.muestra.metodo].nom : c.muestra.objetivo === "todos" ? "Todos" : ""]) });
+    if (C.some(c => c.muestra.objetivo === "decidir")) B.push({ t: "p", estilo: "nota", texto: "LQAS (muestreo para la aceptación de lotes): con n casos elegidos al azar, si al menos c cumplen el criterio, no hay evidencia de problema; si cumplen menos, hay que investigar. Decide, no estima el porcentaje. Tablas de Lemeshow, α = 5 %." });
+    B.push({ t: "h2", texto: "5.2. Evidencias e instrumentos" });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Tipos de evidencia", "Triangulación", "Principios", "Instrumentos"], anchos: [4, 18, 38, 20, 20], filas: C.map((c, i) => [{ texto: String(i + 1), centro: true }, c.evid.tipos.map(k => EVIDENCIAS[k].nom).join(" + "), c.evid.triangulacion, c.evid.principios.map(k => PRINCIPIOS[k]).join(", "), c.evid.instrumentos.map(k => INSTRUMENTOS[k].nom).join(" + ")]) });
+    B.push({ t: "h1", texto: "6. Equipo auditor" });
+    if (lineas(D.equipo).length) B.push({ t: "lista", items: lineas(D.equipo) });
+    B.push({ t: "h1", texto: "7. Recursos" });
+    if (lineas(D.recursos).length) B.push({ t: "lista", items: lineas(D.recursos) });
+    B.push({ t: "h1", texto: "8. Hitos" });
+    B.push({ t: "tabla", cab: ["Hito", "Cuándo", "Fecha", "Estado"], anchos: [36, 26, 16, 22], filas: HITOS.map(h => { const v = aud.hitos[h.k]; return [h.nom, h.cuando, fmtFecha(v.fecha), { texto: v.hecho ? "Hecho" : "Pendiente", fondo: v.hecho ? "DCFCE7" : "" }]; }) });
+    const pil = C.map((c, i) => ({ i, k: concordancia(c.piloto.pares) })).filter(x => x.k.n);
+    if (pil.length) {
+      B.push({ t: "h1", texto: "9. Pilotaje de la hoja de recogida" });
+      B.push({ t: "p", texto: "Dos auditores aplicaron la hoja de recogida a los mismos casos antes de la recogida real, para comprobar que los criterios están bien definidos." });
+      B.push({ t: "tabla", cab: ["Criterio", "Casos", "Acuerdo", "Kappa", "Valoración"], anchos: [12, 12, 14, 12, 50], filas: pil.map(({ i, k }) => [{ texto: String(i + 1), centro: true }, { texto: String(k.n), centro: true }, { texto: nfmt(k.pct, 0) + " %", centro: true }, { texto: nfmt(k.kappa, 2), centro: true }, k.texto]) });
+    }
+    return { titulo: "Plan de auditoría · " + (aud.titulo || ""), bloques: B };
+  }
+
+  // Hoja de recogida imprimible: una tabla por criterio con tantas filas como casos
+  function documentoHoja(aud, fecha) {
+    const D = aud.diseno, B = [{ t: "portada", titulo: "Hoja de recogida de datos", sub: aud.titulo, extra: [lleno(D.periodo) ? "Periodo auditado: " + D.periodo : "", "Auditor/a: ______________________________     Fecha: ____ / ____ / ______"].filter(Boolean) }];
+    B.push({ t: "p", estilo: "nota", texto: "Protección de datos: anota solo el código del caso (HC-01, HC-02…), nunca nombres ni números de historia. Guarda la correspondencia, si hace falta, en un lugar autorizado. Marca Sí si cumple el criterio, No si no lo cumple y NA si no aplica." });
+    aud.criterios.forEach((c, i) => {
+      if (i) B.push({ t: "salto" });
+      B.push({ t: "h1", texto: `Criterio ${i + 1}${lleno(c.subproceso) ? " · " + c.subproceso : ""}` });
+      const r = calcMuestra(c), f = (k, v) => lleno(v) ? [[{ texto: k, negrita: true, fondo: "F1F5F9" }, v]] : [];
+      B.push({ t: "tabla", sinCab: true, fuente: 9, anchos: [22, 78], filas: [...f("Criterio", c.criterio), ...f("Indicador", c.ind.nombre + (textoEstandar(c.ind) ? " · estándar " + textoEstandar(c.ind) : "")), ...f("Cumple si…", c.ind.cumpleSi), ...f("No aplica si…", c.ind.noAplicaSi), ...f("Dónde mirar", c.ind.fuente), ...f("Muestra", r.texto + (METODOS_SEL[c.muestra.metodo] ? ". Selección: " + METODOS_SEL[c.muestra.metodo].nom.toLowerCase() : ""))] });
+      const n = Number.isFinite(r.n) && r.n > 0 ? Math.min(r.n, 120) : 20, sorteo = c.muestra.sorteo;
+      B.push({ t: "tabla", fuente: 9, cab: ["Nº", "Nº listado", "Código del caso", "Sí", "No", "NA", "Observaciones"], anchos: [6, 10, 18, 6, 6, 6, 48], filas: [
+        ...Array.from({ length: n }, (_, k) => [{ texto: String(k + 1), centro: true }, { texto: sorteo[k] ? String(sorteo[k]) : "", centro: true }, "", "", "", "", ""]),
+        [{ texto: "Total", negrita: true }, "", "", "", "", "", ""]
+      ] });
+      if (Number.isFinite(r.c)) B.push({ t: "p", runs: [{ texto: "Decisión LQAS: ", negrita: true }, { texto: `si hay ${r.c} o más «Sí» entre los ${r.n} casos, se acepta (no hay evidencia de problema); si hay ${r.c - 1} o menos, hay que investigar.` }] });
+      else if (lleno(c.ind.numerador)) B.push({ t: "p", runs: [{ texto: "Resultado: ", negrita: true }, { texto: `${formulaInd(c.ind)} = ______ %   frente al estándar ${textoEstandar(c.ind)}` }] });
+    });
+    return { titulo: "Hoja de recogida · " + (aud.titulo || ""), bloques: B };
+  }
+
   // Excel del plan: hoja con el plan y hoja con el cronograma
   function hojasExcelPlan(plan, mapas, fecha) {
     const T = (texto, estilo = "celda") => ({ texto: texto == null ? "" : String(texto), estilo });
@@ -529,10 +820,16 @@
     riesgo: { id: "id", subproceso: [200], fallo: [1000], efecto: [1000], causa: [1000], g: [3], o: [3], d: [3], medidas: [1000], clave: "b", accion: [1000], evidencia: [1000], motivo: [1000] },
     mapa: { id: "id", nombre: [200], unidad: [200], proceso: [300], fecha: [40], equipo: [1000], notas: [3000], subprocesos: { lista: 200, max: 60 }, riesgos: { de: "riesgo", max: 400 }, creado: [40], modificado: [40] },
     origen: { tipo: { en: ["", ...Object.keys(ORIGENES)] }, mapaId: "ref", riesgoIds: { lista: "ref", max: 200 }, detalle: [2000] },
-    criterio: { id: "id", subproceso: [200], riesgoId: "ref", hallazgo: [1000], criterio: [1000] },
+    ind: { nombre: [500], tipo: { en: ["", ...Object.keys(TIPOS_IND)] }, numerador: [1000], denominador: [1000], sentido: { en: ["mas", "menos"] }, estandar: [10], fuente: [1000], exclusiones: [1000], cumpleSi: [1500], noAplicaSi: [1000] },
+    evid: { tipos: { lista: 20, max: 4, en: Object.keys(EVIDENCIAS) }, triangulacion: [2000], principios: { lista: 20, max: 6, en: Object.keys(PRINCIPIOS) }, instrumentos: { lista: 20, max: 5, en: Object.keys(INSTRUMENTOS) }, justificacion: [2000] },
+    muestra: { objetivo: { en: ["", ...Object.keys(OBJETIVOS_MUESTRA)] }, N: [8], e: [5], p: [5], beta: { en: ["20", "10"] }, umbral: [5], n: [6], metodo: { en: ["", ...Object.keys(METODOS_SEL)] }, unidad: [300], sorteo: { nums: [1, 100000], max: 2000 } },
+    par: { a: { en: ["", "si", "no", "na"] }, b: { en: ["", "si", "no", "na"] } },
+    piloto: { pares: { de: "par", max: 50 }, nota: [1500] },
+    diseno: { poblacion: [2000], periodo: [300], fuentes: [2000], equipo: [3000], recursos: [3000], metodologia: [3000] },
+    criterio: { id: "id", subproceso: [200], riesgoId: "ref", hallazgo: [1000], criterio: [1000], ind: { obj: "ind" }, evid: { obj: "evid" }, muestra: { obj: "muestra" }, piloto: { obj: "piloto" } },
     hito: { hecho: "b", fecha: [20], nota: [500] },
     hitos: { aprobacion: { obj: "hito" }, comunicacion: { obj: "hito" }, validacion: { obj: "hito" }, devolucion: { obj: "hito" } },
-    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
+    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, diseno: { obj: "diseno" }, control: { obj: "control" }, criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
     persona: { nombre: [200], cargo: [200] },
     revision: { edicion: [10], fecha: [40], cambio: [500] },
     control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "revision", max: 50 } },
@@ -542,7 +839,7 @@
     plan: { id: "id", anio: [10], ambito: [300], responsable: [300], objetivo: [2000], introduccion: [4000], notas: [3000], capacidad: [3], bloqueados: { nums: [1, 12], max: 12 }, entradas: { de: "entrada", max: 100 }, roles: { obj: "roles" }, aprobacion: { obj: "aprobacion" }, control: { obj: "control" }, creado: [40], modificado: [40] }
   };
   const FABRICA = { riesgo: nuevoRiesgo, mapa: id => nuevoMapa(id, ""), origen: () => nuevaAuditoria("", "").origen, criterio: nuevoCriterio, auditoria: id => nuevaAuditoria(id, ""),
-    hito: nuevoHito, hitos: nuevosHitos, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
+    hito: nuevoHito, hitos: nuevosHitos, ind: nuevoInd, evid: nuevaEvid, muestra: nuevaMuestra, piloto: nuevoPiloto, par: () => ({ a: "", b: "" }), diseno: nuevoDiseno, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
     control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), roles: () => nuevoPlan("", "").roles, aprobacion: () => nuevoPlan("", "").aprobacion,
     entrada: nuevaEntrada, plan: id => nuevoPlan(id, "") };
 
@@ -613,9 +910,11 @@
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
+    TIPOS_IND, EVIDENCIAS, PRINCIPIOS, INSTRUMENTOS, OBJETIVOS_MUESTRA, METODOS_SEL, LQ_COLS,
+    formulaInd, textoEstandar, estandarCumplimiento, tamEstimar, margenError, lqas, opcionesLqas, calcMuestra, sortear, concordancia, avisosDiseno, progresoDiseno, indicadoresDeCopia,
     fmtFecha, sinArticulo, HITOS, nuevosHitos, nuevoControl, nuevaPersona, FRECUENCIAS, TIPOS_ENTRADA, TIPOS_CRITERIO, MESES, MESES_LARGO,
     nuevoPlan, nuevaEntrada, riesgosDeEntrada, hallazgosDeEntrada, prioridadEntrada, frecuenciaSugerida, rondas, cargaMensual, capacidadDe, textoMeses,
-    repartir, avisosPlan, progresoPlan, entradasDesdeMapa, documentoPlan, documentoMapa, hojasExcelPlan,
+    repartir, avisosPlan, progresoPlan, entradasDesdeMapa, documentoPlan, documentoMapa, documentoPlanEspecifico, documentoHoja, hojasExcelPlan,
     sanear, sanearDatos, fusionar, hojasExcelMapa
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API; else raiz.Logica = API;

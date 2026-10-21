@@ -6,7 +6,7 @@ const X = require("../xlsx.js");
 
 let ok = 0, fallos = 0;
 const t = (nombre, cond) => { if (cond) ok++; else { fallos++; console.error("✗ " + nombre); } };
-const eq = (nombre, a, b) => t(`${nombre} (esperado ${JSON.stringify(b)}, obtenido ${JSON.stringify(a)})`, JSON.stringify(a) === JSON.stringify(b));
+const eq = (nombre, a, b) => t(`${nombre} (esperado ${JSON.stringify(b).slice(0, 300)}, obtenido ${JSON.stringify(a).slice(0, 300)})`, JSON.stringify(a) === JSON.stringify(b));
 let n = 0; const gid = () => "id" + (++n);
 
 // IPR
@@ -185,6 +185,56 @@ eq("Ejemplo plan: sin avisos", L.avisosPlan(ejP, C.EJEMPLOS.mapas).filter(a => a
 t("Ejemplo plan: completo", Object.values(L.progresoPlan(ejP)).every(Boolean));
 eq("Siguiente paso con plan completo y sin auditorías", L.siguientePaso({ mapas: [C.EJEMPLOS.mapas[0]], auditorias: [], planes: [ejP] }).k, "auditar");
 
+// Diseño: muestra, LQAS, sorteo, concordancia
+eq("LQAS 90/75 β20", L.lqas(90, 75, "20"), { n: 33, c: 26 });
+eq("LQAS 85/60 β20", L.lqas(85, 60, "20"), { n: 16, c: 11 });
+eq("LQAS 85/60 β10", L.lqas(85, 60, "10"), { n: 24, c: 17 });
+eq("LQAS 90/75 β10", L.lqas(90, 75, "10"), { n: 49, c: 40 });
+eq("LQAS 85/70 β20", L.lqas(85, 70, "20"), { n: 43, c: 32 });
+eq("LQAS umbral ≥ estándar", L.lqas(80, 85, "20"), null);
+eq("LQAS fuera de tabla", L.lqas(92, 70, "20"), null);
+t("Opciones LQAS para 90: de exigente a laxo", L.opcionesLqas(90, "20")[0].umbral === 85 && L.opcionesLqas(90, "20").some(o => o.umbral === 75 && o.n === 33));
+eq("Estimar ±10 % sin universo", L.tamEstimar("10", "50", "").n, 97);
+eq("Estimar ±5 %", L.tamEstimar("5", "50", "").n, 385);
+eq("Estimar con universo 200", L.tamEstimar("10", "50", "200").n, 66);
+eq("Estimar con universo 1000 (tabla)", L.tamEstimar("10", "50", "1000").n, 88);
+eq("Estimar ±15 % universo 500", L.tamEstimar("15", "50", "500").n, 40);
+t("Margen de error 16/20", Math.abs(L.margenError(0.8, 20) - 0.175) < 0.001);
+const cr = L.nuevoCriterio("cr");
+Object.assign(cr.ind, { estandar: "10", sentido: "menos" }); Object.assign(cr.muestra, { objetivo: "decidir", umbral: "60" });
+eq("Muestra LQAS con sentido «menos»", [L.calcMuestra(cr).n, L.calcMuestra(cr).c], [10, 7]);
+cr.ind.estandar = "100"; cr.ind.sentido = "mas";
+t("LQAS con estándar 100 % avisa", L.calcMuestra(cr).avisos.some(a => a.nivel === "warn" && /100 %/.test(a.texto)));
+cr.ind.estandar = "85"; cr.muestra.N = "60";
+t("LQAS: más del 10 % del lote", L.calcMuestra(cr).avisos.some(a => /10 %/.test(a.texto)));
+cr.muestra.N = "10";
+t("LQAS: universo menor que n", L.calcMuestra(cr).avisos.some(a => a.nivel === "warn"));
+cr.muestra.objetivo = "practica"; cr.muestra.N = "";
+eq("Regla práctica", L.calcMuestra(cr).n, 50);
+cr.muestra.objetivo = "todos"; cr.muestra.N = "18";
+eq("Todos los casos", L.calcMuestra(cr).n, 18);
+let semilla = 1; const rnd = () => { semilla = (semilla * 16807) % 2147483647; return (semilla - 1) / 2147483646; };
+const sa = L.sortear(600, 50, "aleatorio", rnd);
+t("Sorteo aleatorio: 50 distintos, ordenados, en rango", sa.length === 50 && new Set(sa).size === 50 && sa.every((x, i) => x >= 1 && x <= 600 && (!i || x > sa[i - 1])));
+const ss = L.sortear(600, 50, "sistematico", () => 0.5);
+eq("Sorteo sistemático: salto 12", [ss.length, ss[1] - ss[0], ss[0]], [50, 12, 7]);
+eq("Sorteo con n ≥ N: todos", L.sortear(5, 10, "aleatorio"), [1, 2, 3, 4, 5]);
+const k1 = L.concordancia([["si", "si"], ["si", "si"], ["no", "no"], ["si", "si"], ["si", "no"], ["si", "si"], ["no", "no"], ["si", "si"]].map(([a, b]) => ({ a, b })));
+t("Kappa 0,71", Math.abs(k1.kappa - 0.714) < 0.01 && k1.nivel === "aceptable");
+const k2 = L.concordancia(Array(6).fill({ a: "si", b: "si" }));
+eq("Concordancia perfecta sin variación", [k2.pct, k2.kappa, k2.nivel], [100, 1, "bueno"]);
+const k3 = L.concordancia([["si", "no"], ["no", "si"], ["si", "si"], ["no", "no"], ["si", "no"], ["no", "si"]].map(([a, b]) => ({ a, b })));
+eq("Concordancia baja", k3.nivel, "bajo");
+t("Pocos casos", L.concordancia([{ a: "si", b: "si" }]).pocos);
+const audEj = C.EJEMPLOS.auditorias[0];
+eq("Ejemplo auditoría: diseño sin avisos", L.avisosDiseno(audEj).filter(a => a.nivel !== "nota").map(a => a.texto), []);
+t("Ejemplo auditoría: diseño completo", Object.values(L.progresoDiseno(audEj)).every(Boolean));
+const cr2 = L.nuevoCriterio("x"); Object.assign(cr2.ind, { nombre: "% de errores", estandar: "95", sentido: "menos", numerador: "a", denominador: "b" });
+t("Aviso de sentido sospechoso", L.avisosDiseno(Object.assign(L.nuevaAuditoria("z", ""), { criterios: [cr2] })).some(a => /cuentas fallos|cuentas aciertos/.test(a.texto)));
+const imp = L.indicadoresDeCopia({ app: "indicadores", indicadores: [{ nombre: "% de pacientes con pulsera", tipo: "proceso", numerador: "Con pulsera", denominador: "Triados", sentido: "mas", estandar: "95 %", fuentes: ["Observación directa"], fuenteOtra: "", terminos: "Pulsera legible", hack: "<x>" }, { nombre: "" }] });
+eq("Importar de Indicadores", [imp.length, imp[0].estandar, imp[0].fuente, imp[0].cumpleSi], [1, "95", "Observación directa", "Pulsera legible"]);
+eq("Importar: no es copia de Indicadores", L.indicadoresDeCopia({ mapas: [] }), null);
+
 // Word
 const D = require("../docx.js");
 const doc = L.documentoPlan(ejP, C.EJEMPLOS.mapas, "21/10/2026");
@@ -195,6 +245,10 @@ t("Word: título", wxml.includes("Plan Anual de Auditorías 2026"));
 t("Word: cronograma", wxml.includes("Auditorías en el mes"));
 t("Word: escapa caracteres", D.construirDocx({ titulo: "x", bloques: [{ t: "p", texto: "a < b & \"c\"" }] }).length > 0 && new TextDecoder().decode(D.construirDocx({ titulo: "x", bloques: [{ t: "p", texto: "a < b & c" }] })).includes("a &lt; b &amp; c"));
 const dm = L.documentoMapa(C.EJEMPLOS.mapas[0], "x");
+const dpe = L.documentoPlanEspecifico(audEj, C.EJEMPLOS.mapas[0], null, "x");
+t("Word del plan específico", new TextDecoder().decode(D.construirDocx(dpe)).includes("Cuándo se considera que cumple"));
+const dh = L.documentoHoja(audEj, "x");
+t("Hoja de recogida: filas según n", dh.bloques.filter(b => b.t === "tabla" && b.cab && b.cab[0] === "Nº" && b.cab[2] === "Código del caso")[0].filas.length === 11);
 t("Word del mapa", new TextDecoder().decode(D.construirDocx(dm)).includes("Omisión de constantes"));
 
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);

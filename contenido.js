@@ -384,7 +384,15 @@
     ],
     creado: "2025-05-30T09:00:00.000Z", modificado: "2025-05-30T09:00:00.000Z"
   };
-  const c = (id, subproceso, riesgoId, hallazgo, criterio) => ({ id, subproceso, riesgoId, hallazgo, criterio });
+  // Criterio con su diseño: indicador, evidencias e instrumentos, muestra y pilotaje
+  const c = (id, subproceso, riesgoId, hallazgo, criterio, ind = {}, evid = {}, muestra = {}, pares = []) => ({
+    id, subproceso, riesgoId, hallazgo, criterio,
+    ind: Object.assign({ nombre: "", tipo: "proceso", numerador: "", denominador: "", sentido: "mas", estandar: "", fuente: "", exclusiones: "", cumpleSi: "", noAplicaSi: "" }, ind),
+    evid: Object.assign({ tipos: [], triangulacion: "", principios: [], instrumentos: [], justificacion: "" }, evid),
+    muestra: Object.assign({ objetivo: "decidir", N: "", e: "10", p: "50", beta: "20", umbral: "", n: "", metodo: "aleatorio", unidad: "", sorteo: [] }, muestra),
+    piloto: { pares: pares.map(([a, b]) => ({ a, b })), nota: pares.length ? "Pilotaje con dos auditoras sobre historias de abril, antes de la recogida real." : "" }
+  });
+  const ev = (tipos, triangulacion, principios, instrumentos, justificacion) => ({ tipos, triangulacion, principios, instrumentos, justificacion });
   const AUD_URG = {
     id: "ej-aud-urg", titulo: "Auditoría interna del proceso de admisión en Urgencias", unidad: "Servicio de Urgencias", centro: "Hospital (ejemplo)",
     proceso: "el proceso de admisión en Urgencias hasta la decisión de ingreso",
@@ -395,18 +403,64 @@
     objetivosEsp: "Comprobar si las acciones preventivas propuestas en el AMFE se han implantado y se mantienen en la práctica clínica.\nMedir, con un indicador por criterio, el cumplimiento en los siete subprocesos del circuito.\nIdentificar los puntos críticos donde el incumplimiento supone más riesgo para el paciente.\nProponer mejoras realistas, priorizadas y con responsable.\nReforzar la cultura de seguridad del paciente en el servicio.",
     alcance: "Episodios de pacientes atendidos en el Área de Urgencias con decisión final de ingreso hospitalario, desde la llegada hasta la decisión de ingreso (sin el seguimiento posterior en planta). Siete subprocesos: recepción y registro administrativo, triaje, sala de espera, valoración médica inicial, pruebas diagnósticas y traslado, comunicación de resultados y gestión del ingreso.",
     planId: "", entradaId: "",
+    diseno: {
+      poblacion: "Pacientes atendidos en el Área de Urgencias con decisión final de ingreso hospitalario.",
+      periodo: "Del 1 al 31 de mayo de 2025",
+      fuentes: "Historia clínica electrónica, módulo de triaje, registros de enfermería, módulo de gestión de camas, sistema de notificación de incidentes, observación directa y entrevistas breves a profesionales.",
+      equipo: "Coordinador/a de Calidad y Seguridad del Paciente (coordina y consolida los resultados)\nSupervisor/a de Enfermería de Urgencias (enfoque operativo y viabilidad de las mejoras)\nFacultativo de Urgencias (criterio clínico)\nEnfermera asistencial (práctica de los cuidados y circuitos reales)\nTCAE (puntos críticos del día a día)\nAdministrativo/a del área (flujos administrativos y registro)\nTécnico/a de Calidad, observador externo al servicio (rigor metodológico)",
+      recursos: "Humanos: equipo auditor multidisciplinar y coordinación con experiencia en calidad.\nDocumentales: AMFE del proceso, mapa del proceso, protocolos, listas de verificación y hojas de recogida.\nMateriales: acceso a la historia clínica electrónica, hojas impresas, hoja de cálculo.\nTiempo: 2–3 sesiones de trabajo de 2–4 horas y 4–6 horas para el análisis y el informe.",
+      metodologia: "Auditoría clínica interna de proceso: revisión documental de historias, observación directa y entrevistas breves, con hoja de recogida de respuesta cerrada (Sí / No / No aplica). Para cada criterio, plan LQAS: se decide si se alcanza el estándar con pocos casos elegidos al azar."
+    },
+    control: {
+      elaborado: [{ nombre: "", cargo: "Coordinador/a de Calidad y Seguridad del Paciente" }, { nombre: "", cargo: "Técnicos de Calidad y Seguridad del Paciente" }],
+      revisado: [{ nombre: "", cargo: "Jefe/a de Servicio de Urgencias" }],
+      aprobado: [{ nombre: "", cargo: "Gerencia del Área de Gestión Sanitaria" }],
+      historial: [{ edicion: "00", fecha: "2025-09-01", cambio: "Documento inicial" }]
+    },
     hitos: { aprobacion: { hecho: true, fecha: "2025-09-08", nota: "Aprobada por la Gerencia junto con el Jefe de Servicio." }, comunicacion: { hecho: true, fecha: "2025-09-15", nota: "Sesión de servicio y correo al personal." }, validacion: { hecho: false, fecha: "", nota: "" }, devolucion: { hecho: false, fecha: "", nota: "" } },
     criterios: [
-      c("c1", TRI, "u8", "Clasificación errónea del nivel de prioridad", "El nivel de prioridad asignado en triaje coincide con el reevaluado por la supervisión clínica."),
-      c("c2", REC, "u5", "El sistema no alerta de antecedentes clínicos relevantes", "Los antecedentes clínicos relevantes son visibles en el campo de admisión y el sistema los alerta."),
-      c("c3", SAL, "u15", "Espera prolongada sin reevaluación clínica", "Los pacientes que superan el tiempo máximo de espera se reevalúan clínicamente y queda registrado."),
-      c("c4", VAL, "u23", "No conciliación de la medicación habitual", "Se documenta la conciliación de la medicación habitual antes de la prescripción en Urgencias."),
-      c("c5", TRI, "u9", "No detección de paciente frágil o con deterioro cognitivo", "El triaje incluye la evaluación de la fragilidad en los pacientes de 75 años o más."),
-      c("c6", COM, "u36", "No revisión o interpretación incompleta de resultados", "Los resultados críticos se comunican al responsable clínico en menos de 60 minutos y queda registrado."),
-      c("c7", ING, "u43", "Demora prolongada en encontrar cama disponible", "El paciente con indicación de ingreso ocupa cama en planta en menos de 6 horas."),
-      c("c8", SAL, "u16", "Falta de acompañamiento o supervisión", "Los pacientes con deterioro cognitivo o dependencia permanecen acompañados o supervisados en la sala de espera."),
-      c("c9", REC, "u7", "Falta de protocolo ante paciente frágil", "Se activa el protocolo de paciente frágil en todos los pacientes identificados como frágiles en admisión."),
-      c("c10", TRI, "u11", "No colocación de pulsera identificativa", "Todos los pacientes están identificados con pulsera antes de pasar a box o a pruebas.")
+      c("c1", TRI, "u8", "Clasificación errónea del nivel de prioridad", "El nivel de prioridad asignado en triaje coincide con el reevaluado por la supervisión clínica.",
+        { nombre: "% de discrepancias entre el nivel de prioridad asignado en triaje y el reevaluado por la supervisión clínica", numerador: "Casos con discrepancia de prioridad", denominador: "Casos revisados", sentido: "menos", estandar: "10", fuente: "Hoja de triaje e historia clínica", cumpleSi: "Cumple (sin discrepancia) si el nivel de prioridad asignado en triaje coincide con el que asigna la supervisión clínica al revisar el caso con los mismos datos.", noAplicaSi: "Pacientes que no pasaron por triaje (traslado directo a reanimación)." },
+        ev(["registros", "documental", "entrevista"], "Se contrastan los registros de triaje con la reevaluación de la supervisión clínica y con entrevistas al personal, para distinguir errores de juicio, de formación o del sistema.", ["veracidad", "trazabilidad", "imparcialidad", "relevancia"], ["checklist", "entrevista"], "La revisión estructurada compara las decisiones reales con la revisión experta; las entrevistas recogen los motivos del fallo."),
+        { N: "1800", umbral: "60", metodo: "sistematico", unidad: "Episodio de triaje" },
+        [["si", "si"], ["si", "si"], ["no", "no"], ["si", "si"], ["si", "no"], ["si", "si"], ["no", "no"], ["si", "si"]]),
+      c("c2", REC, "u5", "El sistema no alerta de antecedentes clínicos relevantes", "Los antecedentes clínicos relevantes son visibles en el campo de admisión y el sistema los alerta.",
+        { nombre: "% de historias con los antecedentes clínicos relevantes visibles en el campo de admisión", numerador: "Historias con los antecedentes visibles en admisión", denominador: "Historias revisadas de pacientes con antecedentes relevantes", estandar: "90", fuente: "Historia clínica electrónica (HIS)", cumpleSi: "Los antecedentes relevantes (alergias, enfermedades crónicas, anticoagulación) aparecen en el campo visible de admisión.", noAplicaSi: "Pacientes sin antecedentes relevantes." },
+        ev(["documental", "registros", "entrevista"], "Historia clínica electrónica, simulación del registro de admisión y entrevistas breves: permiten saber si el problema es de documentación, de visibilidad o de formación.", ["veracidad", "trazabilidad", "confidencialidad"], ["checklist", "entrevista"], "La revisión documental estructurada detecta si los antecedentes están en un lugar visible; las entrevistas, si el personal los conoce y los consulta."),
+        { N: "1200", umbral: "70", unidad: "Historia clínica" },
+        [["si", "si"], ["si", "si"], ["no", "no"], ["si", "si"], ["si", "si"], ["si", "si"]]),
+      c("c3", SAL, "u15", "Espera prolongada sin reevaluación clínica", "Los pacientes que superan el tiempo máximo de espera se reevalúan clínicamente y queda registrado.",
+        { nombre: "% de pacientes con espera superior a 60 minutos con reevaluación clínica registrada", numerador: "Pacientes con espera > 60 min y reevaluación registrada", denominador: "Pacientes con espera > 60 min", estandar: "90", fuente: "Módulo de triaje y seguimiento clínico", cumpleSi: "Consta en la historia una reevaluación (constantes o valoración) dentro de los primeros 60 minutos de espera.", noAplicaSi: "Pacientes atendidos antes de 60 minutos." },
+        ev(["registros", "observacion", "entrevista"], "Cruce de los tiempos del sistema de triaje con la observación del flujo en la sala y entrevistas sobre las causas (falta de personal, sobrecarga, desconocimiento del protocolo).", ["trazabilidad", "veracidad", "relevancia"], ["checklist", "observacion"], "La lista de verificación cuantifica el incumplimiento; la observación aporta el contexto de la sala."),
+        { N: "700", umbral: "65", unidad: "Paciente con espera > 60 min" }),
+      c("c4", VAL, "u23", "No conciliación de la medicación habitual", "Se documenta la conciliación de la medicación habitual antes de la prescripción en Urgencias.",
+        { nombre: "% de pacientes con la medicación habitual registrada antes de la prescripción en Urgencias", numerador: "Pacientes con la medicación habitual registrada antes de la primera prescripción", denominador: "Pacientes revisados con prescripción en Urgencias", estandar: "90", fuente: "Historia clínica electrónica y módulo de prescripción", cumpleSi: "La medicación habitual consta registrada (o consta «sin tratamiento habitual») antes de la primera prescripción en Urgencias.", noAplicaSi: "Pacientes sin ninguna prescripción en Urgencias." },
+        ev(["documental", "registros"], "Historia clínica frente al módulo de prescripción y muestra cruzada con la receta electrónica.", ["veracidad", "trazabilidad", "confidencialidad"], ["checklist"], "Lista de verificación de revisión documental: registro sí/no y momento del registro."),
+        { N: "900", umbral: "60", unidad: "Historia clínica" }),
+      c("c5", TRI, "u9", "No detección de paciente frágil o con deterioro cognitivo", "El triaje incluye la evaluación de la fragilidad en los pacientes de 75 años o más.",
+        { nombre: "% de pacientes de 75 años o más evaluados con una herramienta de detección de fragilidad en el triaje", numerador: "Pacientes ≥ 75 años con escala de fragilidad registrada", denominador: "Pacientes ≥ 75 años triados", estandar: "80", fuente: "Historia clínica electrónica y módulo de triaje", cumpleSi: "Consta una escala de fragilidad (p. ej. FRAIL) cumplimentada en el registro de triaje.", noAplicaSi: "Pacientes en situación crítica atendidos directamente en reanimación." },
+        ev(["registros", "documental", "entrevista"], "Registro de triaje, historia clínica y entrevistas al personal de triaje sobre el uso de la escala.", ["veracidad", "relevancia", "trazabilidad"], ["checklist", "entrevista"], "La lista de verificación mide si se aplica la escala; la guía de entrevista explica por qué no."),
+        { N: "650", umbral: "55", unidad: "Episodio de paciente ≥ 75 años" }),
+      c("c6", COM, "u36", "No revisión o interpretación incompleta de resultados", "Los resultados críticos se comunican al responsable clínico en menos de 60 minutos y queda registrado.",
+        { nombre: "% de resultados críticos comunicados al responsable clínico en menos de 60 minutos", tipo: "resultado", numerador: "Resultados críticos comunicados en < 60 min", denominador: "Resultados críticos revisados", estandar: "90", fuente: "Registro de validación del laboratorio y comunicación anotada en la historia clínica", cumpleSi: "Entre la validación del resultado crítico en el laboratorio y su comunicación registrada al responsable pasan menos de 60 minutos." },
+        ev(["registros", "documental"], "Hora de validación del laboratorio frente a la hora de comunicación anotada en la historia clínica.", ["trazabilidad", "veracidad", "relevancia"], ["checklist"], "Auditoría de tiempos con lista de verificación."),
+        { N: "240", umbral: "60", unidad: "Resultado crítico" }),
+      c("c7", ING, "u43", "Demora prolongada en encontrar cama disponible", "El paciente con indicación de ingreso ocupa cama en planta en menos de 6 horas.",
+        { nombre: "% de ingresos con espera superior a 6 horas desde la indicación médica", tipo: "resultado", numerador: "Ingresos con espera > 6 h desde la orden de ingreso", denominador: "Ingresos revisados", sentido: "menos", estandar: "20", fuente: "Historia clínica electrónica y módulo de gestión de camas", cumpleSi: "Cumple si el paciente ocupa la cama en 6 horas o menos desde la orden de ingreso." },
+        ev(["registros", "entrevista"], "Hora de la orden de ingreso frente a la hora de ocupación de la cama, y entrevistas a Admisión y supervisión sobre los bloqueos.", ["trazabilidad", "relevancia"], ["checklist", "entrevista"], "Auditoría de tiempos; la entrevista explica los bloqueos estructurales."),
+        { N: "600", umbral: "45", unidad: "Ingreso" }),
+      c("c8", SAL, "u16", "Falta de acompañamiento o supervisión", "Los pacientes con deterioro cognitivo o dependencia permanecen acompañados o supervisados en la sala de espera.",
+        { nombre: "% de incidentes por caída o desorientación en pacientes sin acompañamiento documentado", tipo: "resultado", numerador: "Incidentes en pacientes sin acompañamiento documentado", denominador: "Incidentes por caída o desorientación en la sala de espera", sentido: "menos", estandar: "15", fuente: "Sistema de notificación de incidentes e historia clínica", cumpleSi: "Cumple si el paciente del incidente tenía documentado el acompañamiento o la supervisión." },
+        ev(["registros", "documental", "observacion"], "Notificaciones de incidentes, historia clínica y observación en la sala de espera.", ["veracidad", "confidencialidad", "relevancia"], ["checklist", "observacion"], "La lista de verificación revisa cada incidente; la observación comprueba el acompañamiento real."),
+        { objetivo: "todos", N: "18", metodo: "", unidad: "Incidente notificado" }),
+      c("c9", REC, "u7", "Falta de protocolo ante paciente frágil", "Se activa el protocolo de paciente frágil en todos los pacientes identificados como frágiles en admisión.",
+        { nombre: "% de pacientes identificados como frágiles en admisión con el protocolo activado", numerador: "Pacientes frágiles con el protocolo activado", denominador: "Pacientes identificados como frágiles en admisión", estandar: "80", fuente: "Historia clínica electrónica y módulo de admisión", cumpleSi: "Consta la activación del protocolo de paciente frágil en el registro de admisión o de triaje." },
+        ev(["documental", "registros"], "Registro de admisión frente al registro de triaje.", ["veracidad", "trazabilidad"], ["checklist"], "Lista de verificación documental."),
+        { N: "400", umbral: "55", unidad: "Paciente frágil" }),
+      c("c10", TRI, "u11", "No colocación de pulsera identificativa", "Todos los pacientes están identificados con pulsera antes de pasar a box o a pruebas.",
+        { nombre: "% de pacientes triados con la pulsera colocada antes del paso a box o a pruebas", numerador: "Pacientes con pulsera colocada antes del paso a box o pruebas", denominador: "Pacientes triados observados", estandar: "95", fuente: "Observación directa y registro de triaje", cumpleSi: "El paciente lleva la pulsera identificativa con sus datos correctos al pasar a box o a pruebas." },
+        ev(["observacion", "registros", "entrevista"], "Observación directa en el momento del paso a box frente al registro de triaje; entrevistas a enfermería y celadores para saber si falla la colocación o se pierde la pulsera.", ["veracidad", "relevancia", "imparcialidad"], ["observacion", "checklist"], "La observación estructurada, en turnos elegidos al azar, verifica la pulsera en tiempo real; la lista de verificación unifica el criterio entre turnos."),
+        { N: "3000", umbral: "75", metodo: "estratificado", unidad: "Paciente observado (turnos de mañana, tarde y noche)" })
     ],
     creado: "2025-09-01T09:00:00.000Z", modificado: "2025-09-01T09:00:00.000Z"
   };

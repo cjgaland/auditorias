@@ -12,8 +12,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.02";
+  const APP_VERSION = "2026.03";
   const NOVEDADES = [
+    { version: "2026.03", fecha: "Octubre 2026", titulo: "Diseño de la auditoría y pilotaje", cambios: [
+      "Nueva fase de Diseño en cada auditoría, en seis pasos: indicadores, evidencias e instrumentos, muestra, metodología y equipo, hoja de recogida y pilotaje, y plan específico.",
+      "Un indicador por criterio con fórmula, sentido, estándar y la definición de «cumple si…» y «no aplica si…». Se pueden importar desde la app Indicadores.",
+      "Evidencias (documental, observación, entrevistas, registros), triangulación, principios e instrumentos, con avisos si falta algo.",
+      "Muestra: decidir con LQAS (eliges la línea roja y la app da n y c con las tablas de Lemeshow), estimar el porcentaje, regla práctica o todos los casos. Sorteo de los casos (aleatorio simple o sistemático).",
+      "Pilotaje con dos auditores: % de acuerdo y kappa, con la interpretación.",
+      "Hoja de recogida en Word o PDF, con una tabla por criterio, los casos sorteados y la regla de decisión, y plan específico de la auditoría en Word o PDF con control del documento.",
+      "El ejemplo de Urgencias trae su diseño completo."] },
     { version: "2026.02", fecha: "Octubre 2026", titulo: "Plan Anual de Auditorías y documentos Word", cambios: [
       "Nuevo Plan Anual en seis pasos: qué se audita (trae los hallazgos clave del Mapa de Riesgos agrupados por subproceso), alcance y criterios, frecuencia propuesta según el IPR, responsables y recursos, cronograma de 12 meses, y roles y aprobación.",
       "Cronograma con reparto automático: respeta la frecuencia, evita los meses de alta presión que marques y la capacidad del equipo auditor, y avisa de solapamientos.",
@@ -122,8 +130,8 @@
   }
 
   // ---------- Línea del ciclo PDCA (en toda la app) ----------
-  const ENTREGA = 2;   // fases de la app ya construidas (ver L.FASES[].entrega)
-  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/plan", diseno: "#/aprende/3", hacer: "#/aprende/4", verificar: "#/aprende/5", actuar: "#/aprende/6" };
+  const ENTREGA = 3;   // fases de la app ya construidas (ver L.FASES[].entrega)
+  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/plan", diseno: "#/auditorias", hacer: "#/aprende/4", verificar: "#/aprende/5", actuar: "#/aprende/6" };
   const disponible = f => f.entrega <= ENTREGA;
   function lineaPDCA(actualK) {
     return `<ol class="pdca-linea no-print" aria-label="Fases del ciclo de mejora">${L.FASES.map(f => `<li><a href="${FASE_HREF[f.k]}" class="pdca-paso pdca--${f.pdca}${f.k === actualK ? " actual" : ""}${disponible(f) ? "" : " prox"}"${f.k === actualK ? ' aria-current="step"' : ""} title="${esc(L.PDCA[f.pdca] + " · " + f.titulo + (disponible(f) ? "" : " (próximamente)"))}"><span class="pdca-num">${f.n}</span><span class="pdca-lbl">${f.corto}</span></a></li>`).join("")}</ol>`;
@@ -445,9 +453,12 @@
     { k: "inicio", corto: "Inicio", pdca: "P" }, { k: "diseno", corto: "Diseño", pdca: "P" }, { k: "hacer", corto: "Recogida", pdca: "H" },
     { k: "verificar", corto: "Informe", pdca: "V" }, { k: "actuar", corto: "Mejora", pdca: "A" }
   ];
-  function pasosAud(a) {
-    const p = L.progresoInicio(a);
-    return `<ol class="wiz-steps" aria-label="Fases de la auditoría">${PASOS_AUD.map((s, i) => `<li><span class="wiz-step pdca--${s.pdca}${i === 0 ? " actual" : " prox"}${i === 0 && p.hechos === p.total ? " hecho" : ""}"${i === 0 ? ' aria-current="step"' : ` title="Próximamente"`}><span class="wiz-num">${i + 1}</span><span class="wiz-lbl">${s.corto}</span></span></li>`).join("")}</ol>`;
+  function pasosAud(a, actual = "inicio") {
+    const p = L.progresoInicio(a), gd = L.progresoDiseno(a);
+    const hecho = { inicio: p.hechos === p.total, diseno: [1, 2, 3, 4, 5].every(k => gd[k]) };
+    const href = { inicio: `#/auditoria/${a.id}`, diseno: `#/auditoria/${a.id}/diseno/1` };
+    return `<ol class="wiz-steps" aria-label="Fases de la auditoría">${PASOS_AUD.map((s, i) => { const disp = !!href[s.k], act = s.k === actual, cls = `wiz-step pdca--${s.pdca}${act ? " actual" : ""}${disp ? "" : " prox"}${hecho[s.k] && !act ? " hecho" : ""}`, ins = `<span class="wiz-num">${hecho[s.k] && !act ? "✓" : i + 1}</span><span class="wiz-lbl">${s.corto}</span>`;
+      return `<li>${disp ? `<a href="${href[s.k]}" class="${cls}"${act ? ' aria-current="step"' : ""}>${ins}</a>` : `<span class="${cls}" title="Próximamente">${ins}</span>`}</li>`; }).join("")}</ol>`;
   }
   const PH_ORIGEN = {
     estandar: "p. ej. Estándar ACSA sobre identificación inequívoca de pacientes; protocolo de identificación del hospital",
@@ -509,12 +520,12 @@
       <div class="badges">${o ? `<span class="badge">${o.icono} ${o.nom}</span>` : ""}<span class="badge">${L.TIPOS_AUD[a.tipo]}</span><span class="badge">${L.OBJETOS_AUD[a.objeto].nom}</span></div>
       <ul class="check-lista">${p.items.map(([t, ok]) => `<li class="${ok ? "ok" : ""}">${ok ? "✓" : "○"} ${t}</li>`).join("")}</ul>
       <ul class="check-lista check-lista--hitos">${L.HITOS.map(h => `<li class="${a.hitos[h.k].hecho ? "ok" : ""}">${a.hitos[h.k].hecho ? "✓" : "○"} ${h.nom}</li>`).join("")}</ul>
-      <p class="res-prox"><b>Lo que viene:</b> diseño (indicadores, evidencias, instrumentos y muestra), recogida de datos, informe y plan de mejora. Llegarán en las próximas versiones de la app.</p>
+      <p class="res-prox"><b>Lo que viene:</b> el diseño (indicadores, evidencias, muestra y pilotaje); después, recogida de datos, informe y plan de mejora, en las próximas versiones.</p>
     </div>`;
   }
 
   function renderAuditoria(a) {
-    actualAud = a; actualMapa = null; nAyuda = 0;
+    actualAud = a; actualMapa = null; faseAud = "inicio"; nAyuda = 0;
     view.innerHTML = `
       <div class="wiz-top no-print">${volver(modoEjemplo ? "#/ejemplos" : "#/auditorias", modoEjemplo ? "Ejemplos" : "Mis auditorías")}${pasosAud(a)}</div>
       <div class="wiz-grid">
@@ -566,7 +577,7 @@
           <div class="card">${hitosHtml(a)}</div>
           <div class="wiz-nav no-print">
             <span></span>
-            <span class="btn btn--deshab" aria-disabled="true">Siguiente: Diseño (próximamente)</span>
+            <a class="btn btn--primary" href="#/auditoria/${a.id}/diseno/1">Siguiente: Diseño →</a>
           </div>
         </div>
         <aside class="wiz-side no-print" data-zona="resumen-aud">${resumenAud(a)}</aside>
@@ -574,10 +585,11 @@
   }
   function refrescarAud() {
     const a = actualAud; if (!a) return;
+    if (faseAud === "diseno") { refrescarDis(); return; }
     const z = $("[data-zona='resumen-aud']"); if (z) z.innerHTML = resumenAud(a);
     const st = $(".wiz-steps"); if (st) st.outerHTML = pasosAud(a);
   }
-  function repintarAud() { const y = window.scrollY; renderAuditoria(actualAud); window.scrollTo(0, y); }
+  function repintarAud() { const y = window.scrollY; if (faseAud === "diseno") renderDiseno(actualAud, subDiseno); else renderAuditoria(actualAud); window.scrollTo(0, y); }
 
   // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
   function bloquesHtml(bloques) {
@@ -804,15 +816,8 @@
       <h2 class="sec-t">Control del documento</h2>
       <p class="page-lead">Quién elabora, revisa y aprueba el plan, y el historial de cambios. Saldrá en la primera página del documento.</p>
       <div class="card">
-        ${personasHtml(p, "elaborado", "Elaborado por")}
-        ${personasHtml(p, "revisado", "Revisado por")}
-        ${personasHtml(p, "aprobado", "Aprobado por")}
-        <div class="personas"><p class="personas-t">Histórico de revisiones</p>${p.control.historial.map((h, i) => `<div class="persona persona--hist">
-          <input class="txt-in" data-ch="${i}" data-f="edicion" value="${esc(h.edicion)}" placeholder="Ed." autocomplete="off" />
-          <input class="txt-in" type="date" data-ch="${i}" data-f="fecha" value="${esc(h.fecha)}" />
-          <input class="txt-in" data-ch="${i}" data-f="cambio" value="${esc(h.cambio)}" placeholder="Qué cambia" autocomplete="off" />
-          <button type="button" class="icon-btn no-print" data-act="ch-del" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
-          <button type="button" class="link-btn no-print" data-act="ch-add">+ Nueva edición</button></div>
+        ${controlHtml(p)}
+
       </div>
       <h2 class="sec-t">Notas</h2>
       <div class="card">
@@ -899,6 +904,243 @@
     datos.auditorias.push(a); e.auditoriaId = a.id; p.modificado = hoy(); guardar(true);
     location.hash = "#/auditoria/" + a.id;
     toast("Auditoría creada con el alcance y los hallazgos del plan.", 4000);
+  }
+
+  // ---------- Auditoría: diseño (entrega 3) ----------
+  let faseAud = "inicio", subDiseno = 1, indImportados = [];
+  const PASOS_DIS = [
+    { n: 1, corto: "Indicadores", titulo: "Un indicador por criterio" },
+    { n: 2, corto: "Evidencias", titulo: "Evidencias e instrumentos" },
+    { n: 3, corto: "Muestra", titulo: "Muestra: cuántos casos y cuáles" },
+    { n: 4, corto: "Método", titulo: "Metodología, equipo y recursos" },
+    { n: 5, corto: "Pilotaje", titulo: "Hoja de recogida y pilotaje" },
+    { n: 6, corto: "Documento", titulo: "Plan específico de la auditoría" }
+  ];
+  function pasosDisHtml(a, sub) {
+    const g = L.progresoDiseno(a);
+    return `<ol class="wiz-steps" aria-label="Pasos del diseño">${PASOS_DIS.map(s => `<li><a href="#/auditoria/${a.id}/diseno/${s.n}" class="wiz-step${s.n === sub ? " actual" : ""}${g[s.n] ? " hecho" : ""}"${s.n === sub ? ' aria-current="step"' : ""}><span class="wiz-num">${g[s.n] && s.n !== sub ? "✓" : s.n}</span><span class="wiz-lbl">${s.corto}</span></a></li>`).join("")}</ol>`;
+  }
+  const cb = (c, f) => `data-c="${c.id}" data-f="${f}"`;
+  const critCab = (c, i) => `<div class="ent-cab"><span class="crit-n">${i + 1}</span><b>${esc(c.subproceso) || "Sin subproceso"}</b></div><p class="crit-txt">${lleno(c.criterio) ? esc(c.criterio) : `<span class="vacio">${esc(c.hallazgo) || "Criterio sin escribir"}</span>`}</p>`;
+  const segC = (c, f, opciones) => { const v = getPath(c, f) || ""; return `<div class="seg seg--wrap" role="group">${opciones.map(([val, txt]) => `<button type="button" class="${v === val ? "active" : ""}" data-cpick="${c.id}" data-f="${f}" data-v="${val}">${txt}</button>`).join("")}</div>`; };
+  const chipsC = (c, f, cat, nom = x => x) => { const v = getPath(c, f) || []; return `<div class="quick">${Object.keys(cat).map(k => `<button type="button" class="chip${v.includes(k) ? " active" : ""}" data-cmulti="${c.id}" data-f="${f}" data-v="${k}" title="${esc(cat[k].que || "")}">${esc(nom(cat[k]))}</button>`).join("")}</div>`; };
+  const avisosDisHtml = (a, sub) => L.avisosDiseno(a).filter(x => x.paso === sub).map(avisoHtml).join("");
+  function zonaIndHtml(c) {
+    const f = L.formulaInd(c.ind), e = L.textoEstandar(c.ind);
+    return f || e ? `<div class="formula">${esc(f || "Fórmula: escribe numerador y denominador")}${e ? `<br><b>Estándar: ${esc(e)}</b>` : ""}</div>` : "";
+  }
+
+  function disPaso1(a) {
+    return `
+      ${idea("Cada criterio se convierte en <b>un indicador</b>: algo que se cuenta y se compara con un estándar. Y para que dos auditores lleguen al mismo resultado, hay que escribir <b>cuándo cumple</b>.")}
+      ${facil(`<ul><li><b>Nombre</b>: «% de [casos] en los que [se cumple el criterio]».</li>
+        <li><b>Numerador</b>: los casos que cumplen (o los fallos, si el indicador cuenta errores). <b>Denominador</b>: los casos revisados en los que aplica.</li>
+        <li><b>Sentido</b>: si cuentas aciertos, «más es mejor» (≥); si cuentas fallos, «menos es mejor» (≤).</li>
+        <li><b>Cumple si…</b> y <b>No aplica si…</b>: la definición operativa. Sin ella, cada auditor interpreta a su manera.</li></ul>
+        <p>En la hoja de recogida siempre se marca si el caso <b>cumple el criterio</b> (Sí / No / NA), aunque el indicador cuente fallos.</p>
+        <p>Para trabajar un indicador a fondo (calidad SMART, pilotaje, compuestos) tienes la app <a href="${L.URL_IND}" target="_blank" rel="noopener">Indicadores ↗</a>; luego puedes importarlo aquí.</p>`)}
+      <div class="toolbar no-print"><button class="btn" data-act="importar-ind">⬆ Importar de la app Indicadores</button>${indImportados.length ? `<span class="field-sub">${plural(indImportados.length, "indicador cargado", "indicadores cargados")}: elígelo en cada criterio.</span>` : ""}</div>
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 1)}</div>
+      ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
+        <div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-ind" data-c="${c.id}">✎ Proponer a partir del criterio</button></div>
+        ${indImportados.length ? `<div class="filtros filtros--solo no-print"><label>Usar un indicador importado<select data-act-sel="usar-ind" data-c="${c.id}"><option value="">Elige…</option>${indImportados.map((x, j) => `<option value="${j}">${esc(L.corto(x.nombre, 80))}</option>`).join("")}</select></label></div>` : ""}
+        ${campo(c, "ind.nombre", "Nombre del indicador", { bind: cb(c, "ind.nombre"), area: true, ph: "p. ej. % de pacientes triados con la pulsera colocada antes del paso a box" })}
+        <div class="field"><div class="field-head"><label class="field-label">Tipo</label></div>${segC(c, "ind.tipo", Object.keys(L.TIPOS_IND).map(k => [k, L.TIPOS_IND[k].nom]))}</div>
+        <div class="dos-col">
+          ${campo(c, "ind.numerador", "Numerador", { bind: cb(c, "ind.numerador"), area: true, ph: "p. ej. Pacientes con pulsera antes del paso a box" })}
+          ${campo(c, "ind.denominador", "Denominador", { bind: cb(c, "ind.denominador"), area: true, ph: "p. ej. Pacientes triados observados" })}
+        </div>
+        <div class="dos-col">
+          <div class="field"><div class="field-head"><label class="field-label">Sentido</label></div>${segC(c, "ind.sentido", [["mas", "Más es mejor (≥)"], ["menos", "Menos es mejor (≤)"]])}</div>
+          <div class="field"><div class="field-head"><label class="field-label">Estándar</label></div><div class="input-wrap input-wrap--num"><input class="txt-in" ${cb(c, "ind.estandar")} value="${esc(c.ind.estandar)}" inputmode="decimal" placeholder="p. ej. 90" /><span class="input-unit">%</span></div></div>
+        </div>
+        <div data-zc="${c.id}:ind">${zonaIndHtml(c)}</div>
+        ${campo(c, "ind.cumpleSi", "Cumple si…", { bind: cb(c, "ind.cumpleSi"), area: true, ph: "p. ej. El paciente lleva la pulsera con sus datos correctos al pasar a box", help: "La definición operativa: qué tiene que ver o encontrar el auditor para marcar «Sí». Concreta plazos, documentos y términos ambiguos." })}
+        ${campo(c, "ind.noAplicaSi", "No aplica si…", { bind: cb(c, "ind.noAplicaSi"), area: true, opt: true, ph: "p. ej. Pacientes que pasan directamente a reanimación" })}
+        <div class="dos-col">
+          ${campo(c, "ind.fuente", "Fuente de datos", { bind: cb(c, "ind.fuente"), ph: "p. ej. Historia clínica, observación directa" })}
+          ${campo(c, "ind.exclusiones", "Población y exclusiones", { bind: cb(c, "ind.exclusiones"), opt: true, ph: "p. ej. Mayores de 75 años; excluye reanimación" })}
+        </div>
+      </div>`).join("") || `<p class="placeholder-box">Esta auditoría aún no tiene criterios. <a href="#/auditoria/${a.id}">Añádelos en el Inicio</a>.</p>`}
+      ${trampa("Mezclar el sentido es el error más frecuente: «% de errores» con un estándar «≥ 90 %» premia equivocarse. Si cuentas fallos, el estándar va con ≤.")}`;
+  }
+
+  function disPaso2(a) {
+    return `
+      ${idea("Sin evidencias no hay auditoría. Combinar varias fuentes —lo registrado, lo observado y lo que cuentan los profesionales— es <b>triangular</b>: la conclusión es más sólida.")}
+      ${facil(`<table class="mini facil-tabla"><tr><th>Evidencia</th><th>Para qué</th></tr>${Object.values(L.EVIDENCIAS).map(e => `<tr><td><b>${e.nom}</b></td><td>${e.que}</td></tr>`).join("")}</table>
+        <p><b>Instrumentos</b>: ${Object.values(L.INSTRUMENTOS).map(x => `<b>${x.nom.toLowerCase()}</b> (${x.que.charAt(0).toLowerCase() + x.que.slice(1, -1)})`).join("; ")}.</p>
+        <p><b>Principios</b>: veracidad, trazabilidad (se puede volver a comprobar), relevancia, fiabilidad de las fuentes, imparcialidad y confidencialidad.</p>`)}
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 2)}</div>
+      ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
+        ${lleno(c.ind.nombre) ? `<p class="field-sub">Indicador: ${esc(c.ind.nombre)}</p>` : ""}
+        <div class="field"><div class="field-head"><label class="field-label">Tipos de evidencia</label></div>${chipsC(c, "evid.tipos", L.EVIDENCIAS, x => x.nom)}</div>
+        ${campo(c, "evid.triangulacion", "Cómo se triangula (justificación)", { bind: cb(c, "evid.triangulacion"), area: true, ph: "p. ej. Se contrasta el registro de triaje con la observación directa y con entrevistas al personal", help: "Por qué esta combinación de evidencias y qué se compara con qué. Si solo hay una fuente, explica por qué basta." })}
+        <div class="field"><div class="field-head"><label class="field-label">Instrumentos de recogida</label></div>${chipsC(c, "evid.instrumentos", L.INSTRUMENTOS, x => x.nom)}</div>
+        <div class="field"><div class="field-head"><label class="field-label">Principios que se cuidan especialmente</label><span class="field-opt">(opcional)</span></div>${chipsC(c, "evid.principios", Object.fromEntries(Object.entries(L.PRINCIPIOS).map(([k, v]) => [k, { nom: v }])), x => x.nom)}</div>
+        ${campo(c, "evid.justificacion", "Por qué este instrumento", { bind: cb(c, "evid.justificacion"), area: true, opt: true, ph: "p. ej. La lista de verificación unifica el criterio entre turnos y auditores" })}
+      </div>`).join("")}
+      ${ejemplo("triangular la pulsera identificativa", "<p>Observación directa al pasar a box + registro de triaje + entrevistas a enfermería y celadores: así se sabe si falla la <b>colocación</b> o si la pulsera <b>se pierde</b> después.</p>")}`;
+  }
+
+  function muestraHtml(c) {
+    const m = c.muestra, r = L.calcMuestra(c), est = L.estandarCumplimiento(c.ind);
+    let det = "";
+    if (m.objetivo === "decidir") {
+      const ops = Number.isFinite(est) && L.LQ_COLS.includes(est) ? L.opcionesLqas(est, m.beta) : [];
+      det = `<div class="dos-col">
+        <div class="field"><div class="field-head"><label class="field-label">Riesgo de dar por bueno un servicio malo (β)</label>${ayudaBtn("α (falsa alarma) se fija en el 5 %. β es la probabilidad de aceptar un servicio que en realidad está en la línea roja o peor: 20 % es lo habitual; 10 % es más seguro pero pide más casos.").btn}</div><p class="help" id="help-h${nAyuda}" hidden>α (falsa alarma) se fija en el 5 %. β es la probabilidad de aceptar un servicio que en realidad está en la línea roja o peor: 20 % es lo habitual; 10 % es más seguro pero pide más casos.</p>${segC(c, "muestra.beta", [["20", "20 % (habitual)"], ["10", "10 %"]])}</div>
+        <div class="field"><div class="field-head"><label class="field-label">Estándar en cumplimientos</label></div><p class="lq-est">${Number.isFinite(est) ? `<b>${L.nfmt(est, 1)} %</b>${c.ind.sentido === "menos" ? ` <span>(≤ ${esc(c.ind.estandar)} % de fallos = ${L.nfmt(est, 1)} % de casos que cumplen)</span>` : ""}` : '<span class="vacio">Falta el estándar del indicador</span>'}</p></div>
+      </div>
+      ${ops.length ? `<div class="field"><div class="field-head"><label class="field-label">Línea roja (umbral): elige</label>${ayudaBtn("El nivel por debajo del cual la situación es claramente mala. Cuanto más cerca del estándar, más casos hacen falta. Truco práctico: la línea roja más exigente cuyo número de casos podáis revisar.").btn}</div><p class="help" id="help-h${nAyuda}" hidden>El nivel por debajo del cual la situación es claramente mala. Cuanto más cerca del estándar, más casos hacen falta. Truco práctico: la línea roja más exigente cuyo número de casos podáis revisar.</p>
+        <div class="lq-ops">${ops.slice(0, 9).map(o => `<button type="button" class="lq-op${String(o.umbral) === String(m.umbral) ? " active" : ""}" data-cpick="${c.id}" data-f="muestra.umbral" data-v="${o.umbral}"><b>${o.umbral} %</b><span>${o.n} casos · c = ${o.c}</span></button>`).join("")}</div></div>` : ""}`;
+    } else if (m.objetivo === "estimar") {
+      det = `<div class="dos-col">
+        <div class="field"><div class="field-head"><label class="field-label">Margen de error (±)</label></div>${segC(c, "muestra.e", [["5", "±5 %"], ["10", "±10 %"], ["15", "±15 %"], ["20", "±20 %"]])}</div>
+        <div class="field"><div class="field-head"><label class="field-label">% que esperas encontrar</label>${ayudaBtn("Si no tienes idea, deja el 50 %: es lo más exigente y da la muestra más grande.").btn}</div><p class="help" id="help-h${nAyuda}" hidden>Si no tienes idea, deja el 50 %: es lo más exigente y da la muestra más grande.</p><div class="input-wrap input-wrap--num"><input class="txt-in" ${cb(c, "muestra.p")} value="${esc(m.p)}" inputmode="decimal" /><span class="input-unit">%</span></div></div>
+      </div>`;
+    }
+    return `${det}
+      <div data-zc="${c.id}:muestra">${muestraResHtml(c)}</div>`;
+  }
+  function muestraResHtml(c) {
+    const r = L.calcMuestra(c), m = c.muestra;
+    return `${r.texto ? `<div class="muestra-res"><b>${esc(r.texto)}</b>${Number.isFinite(r.n) && m.objetivo !== "decidir" && m.objetivo !== "todos" && Number.isFinite(L.num(m.N)) ? "" : ""}</div>` : ""}${r.avisos.map(avisoHtml).join("")}`;
+  }
+  function disPaso3(a) {
+    return `
+      ${idea("La pregunta que lo cambia todo: ¿quieres <b>estimar</b> cuánto se cumple (báscula: más casos) o <b>decidir</b> si hay un problema (arco del aeropuerto: LQAS, pocos casos)?")}
+      ${facil(`<ul>${Object.values(L.OBJETIVOS_MUESTRA).map(o => `<li><b>${o.nom}</b>: ${o.que}</li>`).join("")}</ul>
+        <p>Sea cual sea, los casos se eligen <b>al azar</b>: ${Object.values(L.METODOS_SEL).map(x => `<b>${x.nom.toLowerCase()}</b> (${x.que.charAt(0).toLowerCase() + x.que.slice(1, -1)})`).join("; ")}.</p>
+        ${trampa("La muestra de conveniencia («las historias que hay sobre la mesa») no vale: lo más reciente y lo más a mano suele estar mejor cumplimentado.")}
+        <p>Para más cálculos (medias, compuestos, concordancia) tienes <a href="${L.URL_TM}" target="_blank" rel="noopener">Tamaño Muestral ↗</a>.</p>`)}
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 3)}</div>
+      ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
+        ${lleno(c.ind.nombre) ? `<p class="field-sub">Indicador: ${esc(c.ind.nombre)} · estándar ${esc(L.textoEstandar(c.ind)) || "sin definir"}</p>` : ""}
+        <div class="dos-col">
+          ${campo(c, "muestra.unidad", "Unidad de estudio", { bind: cb(c, "muestra.unidad"), ph: "p. ej. Historia clínica, episodio, paciente observado" })}
+          <div class="field"><div class="field-head"><label class="field-label">Universo (N)</label>${ayudaBtn("Cuántos casos hay en total entre los que se puede elegir (p. ej. ingresos del periodo auditado). Sirve para el sorteo y para ajustar la muestra.").btn}</div><p class="help" id="help-h${nAyuda}" hidden>Cuántos casos hay en total entre los que se puede elegir (p. ej. ingresos del periodo auditado). Sirve para el sorteo y para ajustar la muestra.</p><div class="input-wrap"><input class="txt-in" ${cb(c, "muestra.N")} value="${esc(c.muestra.N)}" inputmode="numeric" placeholder="p. ej. 600" /></div></div>
+        </div>
+        <div class="field"><div class="field-head"><label class="field-label">¿Qué necesitas?</label></div>${segC(c, "muestra.objetivo", Object.keys(L.OBJETIVOS_MUESTRA).map(k => [k, L.OBJETIVOS_MUESTRA[k].nom]))}</div>
+        ${lleno(c.muestra.objetivo) ? muestraHtml(c) : ""}
+        ${lleno(c.muestra.objetivo) && c.muestra.objetivo !== "todos" ? `<div class="field"><div class="field-head"><label class="field-label">Cómo se eligen los casos</label></div>${segC(c, "muestra.metodo", Object.keys(L.METODOS_SEL).map(k => [k, L.METODOS_SEL[k].nom]))}</div>
+          ${c.muestra.metodo && c.muestra.metodo !== "estratificado" ? `<div class="sorteo no-print"><button type="button" class="btn" data-act="sortear" data-c="${c.id}">🎲 Sortear los casos</button>${c.muestra.sorteo.length ? `<span class="field-sub">Revisa estos números del listado (ordenado, del 1 al ${esc(c.muestra.N)}):</span>` : Number.isFinite(L.num(c.muestra.N)) && Number.isFinite(L.calcMuestra(c).n) ? `<span class="field-sub">Se sortearán ${L.calcMuestra(c).n} números entre 1 y ${esc(c.muestra.N)}: numera tu listado de casos y revisa esos.</span>` : `<span class="field-sub">Para sortear hace falta el universo (N) y el número de casos.</span>`}</div>
+            ${c.muestra.sorteo.length ? `<p class="sorteo-num">${c.muestra.sorteo.join(" · ")}</p>` : ""}` : c.muestra.metodo === "estratificado" ? `<p class="field-sub">En el estratificado se sortea dentro de cada grupo (turno, unidad…) en proporción a su tamaño. Usa el sorteo simple dentro de cada grupo.</p>` : ""}` : ""}
+      </div>`).join("")}
+      ${trampa("Con pocas historias, un porcentaje por debajo del estándar <b>no basta</b> para afirmar el «no cumple»: con 16 de 20 (80 %) el valor real puede estar entre el 62 % y el 98 %. Por eso conviene decidir con LQAS.")}`;
+  }
+
+  const EQUIPO_SUG = ["Coordinador/a de Calidad y Seguridad del Paciente", "Supervisor/a de Enfermería", "Facultativo/a del servicio", "Enfermera/o asistencial", "TCAE", "Personal administrativo", "Técnico/a de Calidad (observador externo)"];
+  function disPaso4(a) {
+    const D = a.diseno;
+    return `
+      ${idea("El plan específico deja escrito <b>quién</b> audita, <b>de qué periodo</b> son los casos, <b>de dónde</b> salen los datos y <b>con qué recursos</b>: así la auditoría se puede repetir igual en el seguimiento.")}
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 4)}</div>
+      <div class="card">
+        ${campo(a, "diseno.poblacion", "Población", { area: true, ph: "p. ej. Pacientes atendidos en Urgencias con decisión de ingreso hospitalario" })}
+        ${campo(a, "diseno.periodo", "Periodo auditado", { ph: "p. ej. Del 1 al 31 de mayo" })}
+        ${campo(a, "diseno.fuentes", "Fuentes de información", { area: true, ph: "p. ej. Historia clínica electrónica, registros de enfermería, observación directa, entrevistas" })}
+        ${campo(a, "diseno.metodologia", "Método", { area: true, rows: 3, ph: "p. ej. Revisión documental, observación directa y entrevistas, con hoja de recogida de respuesta cerrada", extra: `<div class="quick"><button type="button" class="chip chip--accent" data-act="sug-metodo">✎ Proponer a partir del diseño</button></div>` })}
+      </div>
+      <h2 class="sec-t">Equipo auditor</h2>
+      <div class="card">
+        ${campo(a, "diseno.equipo", "Quién forma el equipo y qué aporta", { area: true, rows: 4, sub: "Uno por línea.", ph: "p. ej. Supervisor/a de Enfermería (enfoque operativo)" })}
+        <div class="quick">${EQUIPO_SUG.map(x => `<button type="button" class="chip" data-act="add-equipo" data-v="${esc(x)}">+ ${esc(x)}</button>`).join("")}</div>
+        ${practica("Mejor multidisciplinar y con alguien <b>independiente</b> del área auditada. Quien forma parte del proceso auditado debe declararlo.")}
+      </div>
+      <h2 class="sec-t">Recursos</h2>
+      <div class="card">${campo(a, "diseno.recursos", "Recursos humanos, documentales, materiales y de tiempo", { area: true, rows: 4, sub: "Uno por línea.", ph: "p. ej. Acceso a la historia clínica electrónica\nDos sesiones de 3 horas para la revisión" })}</div>`;
+  }
+
+  function disPaso5(a) {
+    return `
+      ${idea("Antes de recoger datos de verdad, <b>dos auditores</b> aplican la hoja a los <b>mismos 5–10 casos</b> por separado. Si no coinciden, el criterio está mal definido: se aclara y se repite.")}
+      ${facil(`<p>Para cada caso, cada auditor marca si cumple (Sí), no cumple (No) o no aplica (NA), <b>sin hablar entre ellos</b>. La app calcula:</p>
+        <ul><li><b>% de acuerdo</b>: en cuántos casos coinciden.</li><li><b>Kappa</b>: el acuerdo descontando el que saldría por azar (≥ 0,6 bueno; 0,4–0,6 aceptable; &lt; 0,4 bajo).</li></ul>
+        <p>Con un acuerdo bajo, revisad juntos los casos discordantes y reescribid «cumple si…» en el paso de indicadores.</p>`)}
+      <div class="toolbar no-print"><button class="btn btn--primary" data-act="hoja-word">⬇ Hoja de recogida (Word)</button><button class="btn" data-act="hoja-pdf">Hoja para imprimir / PDF</button></div>
+      ${practica("La hoja trae una tabla por criterio con tantas filas como casos (y los números sorteados, si los hay), la definición de «cumple» y la regla de decisión LQAS. Imprímela o rellénala en el ordenador.")}
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 5)}</div>
+      <h2 class="sec-t">Pilotaje con dos auditores</h2>
+      ${a.criterios.map((c, i) => { const k = L.concordancia(c.piloto.pares); return `<div class="crit">${critCab(c, i)}
+        ${c.piloto.pares.length ? `<div class="pil-tabla"><div class="pil-fila pil-cab"><span>Caso</span><span>Auditor A</span><span>Auditor B</span><span></span></div>
+          ${c.piloto.pares.map((p, j) => `<div class="pil-fila"><span>${j + 1}</span>${["a", "b"].map(lado => `<span class="pil-seg">${[["si", "Sí"], ["no", "No"], ["na", "NA"]].map(([v, t]) => `<button type="button" class="${p[lado] === v ? "active" : ""}" data-act="par" data-c="${c.id}" data-i="${j}" data-lado="${lado}" data-v="${v}">${t}</button>`).join("")}</span>`).join("")}<span class="pil-ok">${p.a && p.b ? (p.a === p.b ? '<b class="ok">✓</b>' : '<b class="mal">✗</b>') : ""}</span></div>`).join("")}</div>` : ""}
+        <div class="toolbar no-print"><button class="btn" data-act="pil-add" data-c="${c.id}">+ ${c.piloto.pares.length ? "1 caso más" : "Empezar pilotaje (5 casos)"}</button>${c.piloto.pares.length ? `<button class="btn btn--peligro-ghost" data-act="pil-del" data-c="${c.id}">Quitar el último</button>` : ""}</div>
+        <div data-zc="${c.id}:piloto">${pilotoResHtml(k)}</div>
+        ${c.piloto.pares.length ? campo(c, "piloto.nota", "Notas del pilotaje", { bind: cb(c, "piloto.nota"), area: true, opt: true, ph: "p. ej. Discrepancia en el caso 5: no estaba claro si contaba la valoración telefónica" }) : ""}
+      </div>`; }).join("")}`;
+  }
+  function pilotoResHtml(k) {
+    if (!k.n) return "";
+    return `<div class="pil-res pil-res--${k.pocos ? "pocos" : k.nivel}"><span><b>${L.nfmt(k.pct, 0)} %</b> de acuerdo (${k.acuerdos} de ${k.n})</span><span>Kappa <b>${L.nfmt(k.kappa, 2)}</b></span><p>${esc(k.texto)}</p></div>`;
+  }
+
+  function controlHtml(o) {
+    return `${personasHtml(o, "elaborado", "Elaborado por")}${personasHtml(o, "revisado", "Revisado por")}${personasHtml(o, "aprobado", "Aprobado por")}
+      <div class="personas"><p class="personas-t">Histórico de revisiones</p>${o.control.historial.map((h, i) => `<div class="persona persona--hist">
+        <input class="txt-in" data-ch="${i}" data-f="edicion" value="${esc(h.edicion)}" placeholder="Ed." autocomplete="off" />
+        <input class="txt-in" type="date" data-ch="${i}" data-f="fecha" value="${esc(h.fecha)}" />
+        <input class="txt-in" data-ch="${i}" data-f="cambio" value="${esc(h.cambio)}" placeholder="Qué cambia" autocomplete="off" />
+        <button type="button" class="icon-btn no-print" data-act="ch-del" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+        <button type="button" class="link-btn no-print" data-act="ch-add">+ Nueva edición</button></div>`;
+  }
+  const docPlanEsp = a => L.documentoPlanEspecifico(a, buscaMapa(a.origen.mapaId), buscaPlan(a.planId), new Date().toLocaleDateString("es-ES"));
+  function disPaso6(a) {
+    return `
+      <div class="toolbar no-print">
+        <button class="btn btn--primary" data-act="pe-word">⬇ Plan específico (Word)</button>
+        <button class="btn" data-act="informe">Ver para imprimir / PDF</button>
+        <button class="btn" data-act="hoja-word">⬇ Hoja de recogida (Word)</button>
+      </div>
+      <h2 class="sec-t">Control del documento</h2>
+      <div class="card">${controlHtml(a)}</div>
+      <h2 class="sec-t">Vista previa</h2>
+      <div class="doc-prev">${bloquesHtml(docPlanEsp(a).bloques)}</div>`;
+  }
+
+  const RENDER_DIS = { 1: disPaso1, 2: disPaso2, 3: disPaso3, 4: disPaso4, 5: disPaso5, 6: disPaso6 };
+  function resumenDis(a) {
+    const g = L.progresoDiseno(a), w = L.avisosDiseno(a).filter(x => x.nivel !== "nota").length;
+    return `<div class="resumen">
+      <div class="res-label">Diseño de la auditoría</div>
+      <h3 class="resumen-nombre">${lleno(a.titulo) ? esc(a.titulo) : '<span class="vacio">Sin título</span>'}</h3>
+      <div class="badges"><span class="badge">${plural(a.criterios.length, "criterio", "criterios")}</span>${w ? `<span class="badge badge--aviso">⚠ ${plural(w, "aviso", "avisos")}</span>` : ""}</div>
+      <ul class="check-lista">${PASOS_DIS.slice(0, 5).map(s => `<li class="${g[s.n] ? "ok" : ""}">${g[s.n] ? "✓" : "○"} ${s.titulo}</li>`).join("")}</ul>
+      <p class="res-prox"><b>Lo que viene:</b> la recogida de datos (fase Hacer), en la próxima versión.</p>
+    </div>`;
+  }
+  function renderDiseno(a, sub) {
+    actualAud = a; actualMapa = null; actualPlan = null; faseAud = "diseno"; subDiseno = sub; nAyuda = 0;
+    if (document.body.classList.contains("ver-informe")) {
+      const doc = new URLSearchParams((location.hash.split("?")[1]) || "").get("doc") === "hoja" ? L.documentoHoja(a, new Date().toLocaleDateString("es-ES")) : docPlanEsp(a);
+      view.innerHTML = `${informeBar()}<div class="doc-prev doc-prev--informe">${bloquesHtml(doc.bloques)}</div>${informePie()}`;
+      return;
+    }
+    const s = PASOS_DIS[sub - 1];
+    view.innerHTML = `
+      <div class="wiz-top no-print">${volver(modoEjemplo ? "#/ejemplos" : "#/auditorias", modoEjemplo ? "Ejemplos" : "Mis auditorías")}${pasosAud(a, "diseno")}</div>
+      <div class="wiz-top no-print">${pasosDisHtml(a, sub)}</div>
+      <div class="wiz-grid">
+        <div class="wiz-main">
+          <div class="wiz-titulo"><span class="wiz-paso">Diseño · paso ${sub} de 6 · Planificar</span><h1 class="page-title">${s.titulo}</h1></div>
+          ${RENDER_DIS[sub](a)}
+          <div class="wiz-nav no-print">
+            ${sub > 1 ? `<a class="btn" href="#/auditoria/${a.id}/diseno/${sub - 1}">← Anterior</a>` : `<a class="btn" href="#/auditoria/${a.id}">← Inicio</a>`}
+            ${sub < 6 ? `<a class="btn btn--primary" href="#/auditoria/${a.id}/diseno/${sub + 1}">Siguiente: ${PASOS_DIS[sub].corto} →</a>` : `<span class="btn btn--deshab" aria-disabled="true">Siguiente: Recogida (próximamente)</span>`}
+          </div>
+        </div>
+        <aside class="wiz-side no-print" data-zona="resumen-dis">${resumenDis(a)}</aside>
+      </div>`;
+  }
+  function refrescarDis() {
+    const a = actualAud; if (!a) return;
+    $$("[data-zc]").forEach(el => {
+      const [id, tipo] = el.dataset.zc.split(":"), c = a.criterios.find(x => x.id === id); if (!c) return;
+      el.innerHTML = tipo === "ind" ? zonaIndHtml(c) : tipo === "muestra" ? muestraResHtml(c) : tipo === "piloto" ? pilotoResHtml(L.concordancia(c.piloto.pares)) : "";
+    });
+    const z = $("[data-zona='resumen-dis']"); if (z) z.innerHTML = resumenDis(a);
+    const av = $("[data-zona='avisos-dis']"); if (av) av.innerHTML = avisosDisHtml(a, subDiseno);
+    const st = $$(".wiz-steps")[1]; if (st) st.outerHTML = pasosDisHtml(a, subDiseno);
   }
 
   // ---------- Ejemplos ----------
@@ -1115,7 +1357,7 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
   }
-  function irInforme() { location.hash = (actualPlan ? `#/plan/${actualPlan.id}/6` : rutaActual()) + "?informe=1"; }
+  function irInforme() { location.hash = (actualPlan ? `#/plan/${actualPlan.id}/6` : actualAud && faseAud === "diseno" ? `#/auditoria/${actualAud.id}/diseno/6` : rutaActual()) + "?informe=1"; }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
     if (!document.body.classList.contains("ver-informe")) { irInforme(); setTimeout(() => window.print(), 400); return; }
@@ -1252,7 +1494,9 @@
       history.replaceState(null, "", "#/auditoria/" + a.id); renderAuditoria(a); navR = "auditorias";
     } else if (partes[0] === "auditoria" && partes[1]) {
       const a = buscaAud(partes[1]) || borradores.get(partes[1]);
-      if (a) renderAuditoria(a); else noEncontrado("esa auditoría", "#/auditorias", "Ir a mis auditorías");
+      if (!a) noEncontrado("esa auditoría", "#/auditorias", "Ir a mis auditorías");
+      else if (partes[2] === "diseno") renderDiseno(a, informe ? 6 : Math.min(6, Math.max(1, parseInt(partes[3], 10) || 1)));
+      else renderAuditoria(a);
       navR = "auditorias";
     } else if (partes[0] === "auditorias") renderAuditorias();
     else if (partes[0] === "ejemplos") renderEjemplos();
@@ -1277,6 +1521,8 @@
   }
   const buscaRiesgo = id => actualMapa && actualMapa.riesgos.find(r => r.id === id);
   const buscaCrit = id => actualAud && actualAud.criterios.find(c => c.id === id);
+  const docObj = () => actualPlan || actualAud;
+  const repintarDoc = () => actualPlan ? repintarPlan() : repintarAud();
   // Los cuadros de texto crecen con lo escrito
   function autoAlto(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
   new MutationObserver(() => $$("textarea.txt-in", view).forEach(el => { if (!el.closest("[hidden]")) autoAlto(el); })).observe(view, { childList: true, subtree: true });
@@ -1296,19 +1542,19 @@
     }
     if (t.dataset.c) {
       const c = buscaCrit(t.dataset.c); if (!c) return;
-      c[t.dataset.f] = t.value; tocado(actualAud); refrescarAud(); return;
+      setPath(c, t.dataset.f, t.value); tocado(actualAud); refrescarAud(); return;
     }
     if (t.dataset.e) {
       const e = buscaEnt(t.dataset.e); if (!e) return;
       e[t.dataset.f] = t.value; tocado(actualPlan); refrescarPlan(); return;
     }
-    if (t.dataset.cp && actualPlan) {
-      const x = actualPlan.control[t.dataset.cp][Number(t.dataset.i)]; if (!x) return;
-      x[t.dataset.f] = t.value; tocado(actualPlan); refrescarPlan(); return;
+    if (t.dataset.cp && docObj()) {
+      const x = docObj().control[t.dataset.cp][Number(t.dataset.i)]; if (!x) return;
+      x[t.dataset.f] = t.value; tocado(docObj()); return;
     }
-    if (t.dataset.ch && actualPlan) {
-      const x = actualPlan.control.historial[Number(t.dataset.ch)]; if (!x) return;
-      x[t.dataset.f] = t.value; tocado(actualPlan); return;
+    if (t.dataset.ch && docObj()) {
+      const x = docObj().control.historial[Number(t.dataset.ch)]; if (!x) return;
+      x[t.dataset.f] = t.value; tocado(docObj()); return;
     }
     if (t.dataset.k) {
       const obj = actualMapa || actualAud || actualPlan; if (!obj) return;
@@ -1319,6 +1565,13 @@
   view.addEventListener("change", e => {
     const f = e.target.closest("[data-filtro]");
     if (f) { if (f.dataset.filtro === "sub") filtroSub = f.value; else ordenMapa = f.value; repintarMapa(); return; }
+    const ui = e.target.closest("[data-act-sel='usar-ind']");
+    if (ui && actualAud && ui.value !== "") {
+      const c = buscaCrit(ui.dataset.c), x = indImportados[Number(ui.value)]; if (!c || !x) return;
+      const hacer = () => { Object.keys(c.ind).forEach(k => { if (x[k] !== undefined) c.ind[k] = x[k]; }); tocado(actualAud); repintarAud(); toast("Indicador importado. Revisa «cumple si…» y el estándar.", 3500); };
+      if (lleno(c.ind.nombre)) confirmar("<p>Se sustituirá el indicador de este criterio por el importado.</p>", "Sustituir", hacer, { peligro: false }); else { hacer(); }
+      return;
+    }
     const se = e.target.closest("[data-act-sel='ent-add-rg']");
     if (se && actualPlan && se.value) {
       const en = buscaEnt(se.dataset.e); if (!en) return;
@@ -1358,6 +1611,17 @@
       const en = buscaEnt(b.dataset.emulti); if (!en) return;
       const i = en.tiposCriterio.indexOf(b.dataset.v); if (i < 0) en.tiposCriterio.push(b.dataset.v); else en.tiposCriterio.splice(i, 1);
       b.classList.toggle("active", i < 0); tocado(actualPlan); return;
+    }
+    if ((b = t.closest("[data-cpick]"))) {
+      const c = buscaCrit(b.dataset.cpick); if (!c) return;
+      setPath(c, b.dataset.f, b.dataset.v);
+      if (b.dataset.f === "muestra.objetivo" || b.dataset.f === "muestra.metodo" || b.dataset.f === "muestra.umbral" || b.dataset.f === "muestra.beta") c.muestra.sorteo = [];
+      tocado(actualAud); repintarAud(); return;
+    }
+    if ((b = t.closest("[data-cmulti]"))) {
+      const c = buscaCrit(b.dataset.cmulti); if (!c) return;
+      const arr = getPath(c, b.dataset.f), i = arr.indexOf(b.dataset.v); if (i < 0) arr.push(b.dataset.v); else arr.splice(i, 1);
+      b.classList.toggle("active", i < 0); tocado(actualAud); refrescarAud(); return;
     }
     if ((b = t.closest("[data-eadd]"))) {
       const en = buscaEnt(b.dataset.eadd); if (!en) return;
@@ -1509,13 +1773,56 @@
       else confirmar(`<p>${plural(conMeses, "auditoría tiene", "auditorías tienen")} ya meses. Puedes repartir solo las que faltan (respetando las que ya están) o rehacer todo el calendario.</p>`, "Solo las que faltan", () => hacer(false), { peligro: false, titulo: "Repartir automáticamente", otro: ["Rehacer todo", () => hacer(true)] });
     }
     else if (a === "vaciar-crono" && actualPlan) confirmar("<p>Se quitarán todos los meses del calendario (se conservan las auditorías y sus datos).</p>", "Vaciar", () => { actualPlan.entradas.forEach(x => { x.meses = []; }); tocado(actualPlan); repintarPlan(); }, { titulo: "Vaciar el calendario" });
-    else if (a === "cp-add" && actualPlan) { actualPlan.control[b.dataset.k].push(L.nuevaPersona()); tocado(actualPlan); repintarPlan(); }
-    else if (a === "cp-del" && actualPlan) { actualPlan.control[b.dataset.k].splice(Number(b.dataset.i), 1); tocado(actualPlan); repintarPlan(); }
-    else if (a === "ch-add" && actualPlan) {
-      const h = actualPlan.control.historial, ult = h[h.length - 1], n = ult ? parseInt(ult.edicion, 10) : -1;
-      h.push({ edicion: String(Number.isFinite(n) ? n + 1 : h.length).padStart(2, "0"), fecha: new Date().toISOString().slice(0, 10), cambio: "" }); tocado(actualPlan); repintarPlan();
+    else if (a === "cp-add" && docObj()) { docObj().control[b.dataset.k].push(L.nuevaPersona()); tocado(docObj()); repintarDoc(); }
+    else if (a === "cp-del" && docObj()) { docObj().control[b.dataset.k].splice(Number(b.dataset.i), 1); tocado(docObj()); repintarDoc(); }
+    else if (a === "ch-add" && docObj()) {
+      const h = docObj().control.historial, ult = h[h.length - 1], n = ult ? parseInt(ult.edicion, 10) : -1;
+      h.push({ edicion: String(Number.isFinite(n) ? n + 1 : h.length).padStart(2, "0"), fecha: new Date().toISOString().slice(0, 10), cambio: "" }); tocado(docObj()); repintarDoc();
     }
-    else if (a === "ch-del" && actualPlan) { actualPlan.control.historial.splice(Number(b.dataset.i), 1); tocado(actualPlan); repintarPlan(); }
+    else if (a === "ch-del" && docObj()) { docObj().control.historial.splice(Number(b.dataset.i), 1); tocado(docObj()); repintarDoc(); }
+    // --- Diseño de la auditoría ---
+    else if (a === "importar-ind") $("#input-ind").click();
+    else if (a === "sug-ind" && au) {
+      const c = buscaCrit(b.dataset.c); if (!c) return;
+      const crit = String(c.criterio || c.hallazgo || "").trim().replace(/\.$/, "");
+      if (!crit) { toast("Escribe primero el criterio en el Inicio.", 3000); return; }
+      const hacer = () => {
+        const f = crit.charAt(0).toLowerCase() + crit.slice(1);
+        Object.assign(c.ind, { nombre: `% de casos revisados en los que ${f}`, numerador: `Casos en los que ${f}`, denominador: "Casos revisados en los que aplica el criterio", sentido: "mas", cumpleSi: crit + "." });
+        if (!c.ind.tipo) c.ind.tipo = "proceso";
+        tocado(au); repintarAud(); toast("Propuesta escrita. Cambia «casos» por lo que cuentas (pacientes, historias…) y pon el estándar.", 4500);
+      };
+      if (lleno(c.ind.nombre)) confirmar("<p>Se sustituirán el nombre, el numerador, el denominador y «cumple si…» que has escrito.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (a === "sug-metodo" && au) {
+      const tipos = [...new Set(au.criterios.flatMap(c => c.evid.tipos))].map(k => L.EVIDENCIAS[k].nom.toLowerCase());
+      const ins = [...new Set(au.criterios.flatMap(c => c.evid.instrumentos))].map(k => L.INSTRUMENTOS[k].nom.toLowerCase());
+      const lq = au.criterios.some(c => c.muestra.objetivo === "decidir");
+      au.diseno.metodologia = `Auditoría ${au.tipo === "externa" ? "externa" : "interna"} ${L.OBJETOS_AUD[au.objeto].nom.toLowerCase()}${tipos.length ? ", con evidencias " + tipos.join(", ") : ""}${ins.length ? ". Instrumentos: " + ins.join(", ") : ""}. Hoja de recogida de respuesta cerrada (Sí / No / No aplica) y casos elegidos al azar${lq ? "; para los criterios con plan LQAS se decide si se alcanza el estándar con pocos casos" : ""}.`;
+      tocado(au); repintarAud();
+    }
+    else if (a === "add-equipo" && au) {
+      const v = b.dataset.v; if (L.sinTildes(au.diseno.equipo).includes(L.sinTildes(v))) return;
+      au.diseno.equipo = (lleno(au.diseno.equipo) ? au.diseno.equipo.replace(/\s+$/, "") + "\n" : "") + v;
+      const ta = $('[data-k="diseno.equipo"]'); if (ta) { ta.value = au.diseno.equipo; autoAlto(ta); } tocado(au); refrescarAud();
+    }
+    else if (a === "sortear" && au) {
+      const c = buscaCrit(b.dataset.c); if (!c) return;
+      const r = L.calcMuestra(c), N = L.num(c.muestra.N);
+      if (!Number.isFinite(N) || !Number.isFinite(r.n)) { toast("Para sortear hace falta el universo (N) y el número de casos.", 3500); return; }
+      const rnd = () => { const x = new Uint32Array(1); crypto.getRandomValues(x); return x[0] / 4294967296; };
+      const hacer = () => { c.muestra.sorteo = L.sortear(N, r.n, c.muestra.metodo, rnd); tocado(au); repintarAud(); toast(`Sorteados ${c.muestra.sorteo.length} casos. Saldrán en la hoja de recogida.`, 3500); };
+      if (c.muestra.sorteo.length) confirmar("<p>Se hará un sorteo nuevo y se perderá el anterior.</p>", "Sortear de nuevo", hacer, { peligro: false }); else hacer();
+    }
+    else if (a === "par" && au) {
+      const c = buscaCrit(b.dataset.c), p = c && c.piloto.pares[Number(b.dataset.i)]; if (!p) return;
+      p[b.dataset.lado] = p[b.dataset.lado] === b.dataset.v ? "" : b.dataset.v; tocado(au); repintarAud();
+    }
+    else if (a === "pil-add" && au) { const c = buscaCrit(b.dataset.c); if (!c) return; const k = c.piloto.pares.length ? 1 : 5; for (let i = 0; i < k; i++) c.piloto.pares.push({ a: "", b: "" }); tocado(au); repintarAud(); }
+    else if (a === "pil-del" && au) { const c = buscaCrit(b.dataset.c); if (!c) return; c.piloto.pares.pop(); tocado(au); repintarAud(); }
+    else if (a === "hoja-word" && au) descargarWord(L.documentoHoja(au, new Date().toLocaleDateString("es-ES")), `Hoja de recogida ${(au.titulo || "").slice(0, 50).replace(/[\\/:*?"<>|%]/g, "")} ${fechaArchivo()}.docx`);
+    else if (a === "hoja-pdf" && au) location.hash = `#/auditoria/${au.id}/diseno/6?informe=1&doc=hoja`;
+    else if (a === "pe-word" && au) descargarWord(docPlanEsp(au), `Plan de auditoría ${(au.titulo || "").slice(0, 50).replace(/[\\/:*?"<>|%]/g, "")} ${fechaArchivo()}.docx`);
     else if (a === "roles-sug" && actualPlan) {
       let n = 0; ROLES.forEach(([k, , ph]) => { if (!lleno(actualPlan.roles[k])) { actualPlan.roles[k] = k === "coordinacion" && lleno(actualPlan.responsable) ? actualPlan.responsable + ": planifica, coordina y consolida los resultados." : ph; n++; } });
       tocado(actualPlan); repintarPlan(); toast(n ? "Propuesta añadida en los roles vacíos. Ajústala a tu unidad." : "Todos los roles tienen ya texto.", 3000);
@@ -1557,6 +1864,16 @@
   });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
+  $("#input-ind").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let l = null; try { l = L.indicadoresDeCopia(JSON.parse(fr.result)); } catch (er) { /* */ }
+      if (!l || !l.length) { toast("Ese archivo no es una copia de la app Indicadores (o no tiene indicadores con nombre).", 4500); return; }
+      indImportados = l; if (actualAud) repintarAud(); toast(`Cargados ${plural(l.length, "indicador", "indicadores")}. Elige en cada criterio cuál usar.`, 4000);
+    };
+    fr.readAsText(f);
+  });
 
   // Imprimir: abrir los desplegables y restaurarlos después
   let cerrados = [];
