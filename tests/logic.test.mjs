@@ -251,5 +251,36 @@ const dh = L.documentoHoja(audEj, "x");
 t("Hoja de recogida: filas según n", dh.bloques.filter(b => b.t === "tabla" && b.cab && b.cab[0] === "Nº" && b.cab[2] === "Código del caso")[0].filas.length === 11);
 t("Word del mapa", new TextDecoder().decode(D.construirDocx(dm)).includes("Omisión de constantes"));
 
+
+// Recogida y resultados
+const ejA = C.EJEMPLOS.auditorias[0];
+const dec = ejA.criterios.map(c => { const r = L.resultadoCriterio(c); return r.lqas.acepta ? "A" : "R"; }).join("");
+eq("Decisiones LQAS del ejemplo (como el ejercicio 7bis)", dec, "AARAARAAAA");
+eq("Márgenes del ejemplo", [0, 1, 4, 6, 9].map(i => Math.round(L.resultadoCriterio(ejA.criterios[i]).margen)), [25, 18, 19, 31, 13]);
+t("Criterio 7: aviso de línea roja lejana", /muy lejos/.test(L.resultadoCriterio(ejA.criterios[6]).detalle));
+t("Ejemplo sin avisos graves de recogida", !L.avisosRecogida(ejA).some(a => a.nivel !== "nota"));
+const cc = L.nuevoCriterio("cc"); Object.assign(cc.ind, { estandar: "90", sentido: "mas" }); Object.assign(cc.muestra, { objetivo: "estimar", e: "10", p: "50", N: "" });
+cc.recogida.casos = Array.from({ length: 97 }, (_, i) => L.nuevoCaso("HC-" + i, "")); cc.recogida.casos.forEach((x, i) => { x.valor = i < 95 ? "si" : "no"; });
+let rr = L.resultadoCriterio(cc);
+eq("Estimar: cumple con el intervalo por encima", rr.estado, "verde");
+cc.recogida.casos.forEach((x, i) => { x.valor = i < 85 ? "si" : "no"; }); rr = L.resultadoCriterio(cc);
+eq("Estimar: no concluyente si el estándar cae dentro", rr.estado, "ambar");
+cc.recogida.casos.forEach((x, i) => { x.valor = i < 60 ? "si" : "no"; }); rr = L.resultadoCriterio(cc);
+eq("Estimar: no cumple con el intervalo por debajo", rr.estado, "rojo");
+cc.muestra.objetivo = "todos"; cc.recogida.casos.forEach((x, i) => { x.valor = i < 88 ? "si" : i < 90 ? "na" : "no"; }); rr = L.resultadoCriterio(cc);
+eq("Todos los casos: sin margen, NA fuera del denominador", [rr.estado, rr.n, rr.na], ["verde", 95, 2]);
+cc.muestra.objetivo = "decidir"; cc.muestra.umbral = "75"; cc.recogida.casos = cc.recogida.casos.slice(0, 20); rr = L.resultadoCriterio(cc);
+eq("LQAS: faltan casos", [rr.estado, rr.lqas.faltan], ["gris", 13]);
+t("Margen con p = 1 no es cero", L.margen95(1, 20) > 0);
+t("Código que parece nombre", L.pareceIdentificador("Juan Pérez") && L.pareceIdentificador("NHC 1234567") && !L.pareceIdentificador("HC-07"));
+const aid = L.nuevaAuditoria("ai", ""); const cx = L.nuevoCriterio("cx"); cx.recogida.casos = [L.nuevoCaso("María López"), L.nuevoCaso("HC-01"), L.nuevoCaso("HC-01")]; aid.criterios = [cx];
+const AR = L.avisosRecogida(aid);
+t("Avisos de recogida: identificador y repetido", AR.some(a => a.nivel === "error") && AR.some(a => /repetido/.test(a.texto)));
+const pc = L.prepararCasos(Object.assign(L.nuevoCriterio("p"), { muestra: Object.assign(L.nuevoCriterio("q").muestra, { sorteo: [5, 9] }) }), 3);
+eq("Preparar casos con sorteo", pc.map(x => x.codigo + ":" + x.listado), ["HC-01:5", "HC-02:9", "HC-03:"]);
+const dr = L.documentoResultados(ejA, "x");
+t("Word de resultados", new TextDecoder().decode(D.construirDocx(dr)).includes("Matriz de resultados"));
+t("Excel de resultados", X.construirLibroXlsx(L.hojasExcelRecogida(ejA, "x")).length > 1000);
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);

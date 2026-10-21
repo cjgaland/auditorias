@@ -964,3 +964,71 @@ body.ver-informe .doc-salto { border: 0; margin: 0; break-after: page; }
 .pil-res--bueno { border-color: var(--green); background: var(--green-dim); }
 .pil-res--aceptable { border-color: var(--amber); background: var(--amber-dim); }
 .pil-res--bajo { border-color: var(--red); background: var(--red-dim); }
+
+/* ============================================================
+   Entrega 4 · Recogida de datos y resultados
+   ============================================================ */
+.sem-b { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 800; white-space: nowrap; background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border); }
+.sem-b--verde { background: var(--green-dim); color: var(--green); border-color: rgba(21,128,61,.35); }
+.sem-b--rojo { background: var(--red-dim); color: var(--red); border-color: rgba(190,18,60,.35); }
+.sem-b--ambar { background: var(--amber-dim); color: var(--amber); border-color: rgba(180,83,9,.35); }
+.sem-resumen { display: flex; gap: 6px; margin: 4px 0 8px; }
+.sem-l { text-decoration: none; color: var(--text-2); font-weight: 600; }
+.sem-l--verde { color: var(--green); } .sem-l--rojo { color: var(--red); } .sem-l--ambar { color: var(--amber); }
+.rc-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (min-width: 720px) { .rc-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rc-card { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--radius-lg); background: var(--bg-2); border: 1px solid var(--border); border-left: 5px solid var(--border-lite); text-decoration: none; color: var(--text-1); box-shadow: var(--shadow-sm); }
+.rc-card:hover { border-color: var(--cyan); }
+.sem-borde--verde { border-left-color: var(--green); } .sem-borde--rojo { border-left-color: var(--red); } .sem-borde--ambar { border-left-color: var(--amber); }
+.rc-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rc-cab b { flex: 1; min-width: 0; }
+.rc-ind { font-size: 13.5px; color: var(--text-2); }
+.rc-barra { height: 7px; border-radius: 999px; background: var(--bg-3); overflow: hidden; }
+.rc-barra i { display: block; height: 100%; background: var(--cyan); border-radius: 999px; }
+.rc-cuenta { font-size: 12.5px; color: var(--text-3); }
+.rc-ir { justify-self: end; font-size: 13.5px; font-weight: 700; color: var(--cyan); }
+.tabla-matriz td, .tabla-matriz th { text-align: left !important; vertical-align: top; }
+.tabla-matriz { min-width: 640px; }
+.crit-pills { flex-wrap: wrap; }
+.sem-p { --pc: var(--text-3); }
+.sem-p--verde { --pc: var(--green); } .sem-p--rojo { --pc: var(--red); } .sem-p--ambar { --pc: var(--amber); }
+.recordatorio .ficha-t th { width: 30%; }
+.res-sticky { position: sticky; top: calc(var(--header-h) + 4px); z-index: 5; margin: 10px 0; }
+.res-crit { padding: 10px 12px; border-radius: var(--radius-lg); background: var(--bg-2); border: 2px solid var(--border); box-shadow: var(--shadow); }
+.res-crit--verde { border-color: var(--green); } .res-crit--rojo { border-color: var(--red); } .res-crit--ambar { border-color: var(--amber); }
+.res-nums { display: flex; flex-wrap: wrap; gap: 6px; }
+.rn { display: grid; justify-items: center; min-width: 54px; padding: 4px 8px; border-radius: 10px; background: var(--bg-3); font-size: 11.5px; font-weight: 700; color: var(--text-2); }
+.rn b { font-size: 20px; line-height: 1.1; color: var(--text-1); }
+.rn--si b { color: var(--green); } .rn--no b { color: var(--red); }
+.rn--val { margin-left: auto; min-width: 90px; } .rn--val b { color: var(--cyan); }
+.res-lq { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
+.res-concl { margin: 6px 0 0; font-size: 13.5px; line-height: 1.45; }
+.res-det { margin: 4px 0 0; font-size: 12.5px; color: var(--text-2); }
+@media (max-width: 560px) { .res-concl, .res-det { font-size: 12.5px; } .rn b { font-size: 17px; } .res-sticky .res-det { display: none; } }
+.casos { display: grid; gap: 6px; }
+.caso { display: grid; grid-template-columns: 30px minmax(70px, 110px) minmax(150px, 190px) minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--border-lite); }
+.caso--si { border-left-color: var(--green); } .caso--no { border-left-color: var(--red); background: var(--red-dim); } .caso--na { border-left-color: var(--text-3); opacity: .8; }
+.caso-n { text-align: center; font-weight: 800; color: var(--text-3); font-size: 13px; }
+.caso .txt-in { width: 100%; min-width: 0; padding: 8px 9px; border: 1.5px solid var(--border-lite); border-radius: 8px; background: var(--bg); color: var(--text-1); font: 14px var(--font); }
+.caso-cod { font-family: var(--mono) !important; font-size: 13px !important; }
+.caso-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1.5px solid var(--border-lite); border-radius: 10px; overflow: hidden; }
+.caso-seg button { min-height: 40px; border: 0; background: var(--bg); color: var(--text-2); font: 800 14px var(--font); }
+.caso-seg button + button { border-left: 1px solid var(--border); }
+.caso-seg button[data-v="si"].active { background: var(--green); color: #fff; }
+.caso-seg button[data-v="no"].active { background: var(--red); color: #fff; }
+.caso-seg button[data-v="na"].active { background: var(--text-3); color: #fff; }
+:root[data-tema="oscuro"] .caso-seg button.active { color: #0d1b2a; }
+.caso-lis { font-size: 11.5px; font-family: var(--mono); color: var(--text-3); }
+@media (max-width: 640px) {
+  .caso { grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1.4fr); grid-template-areas: "n cod seg" "n obs obs"; }
+  .caso-n { grid-area: n; } .caso-cod { grid-area: cod; } .caso-seg { grid-area: seg; } .caso-obs { grid-area: obs; } .caso-lis { display: none; }
+}
+.res-movil { display: none; margin: 12px 0; }
+@media (max-width: 640px) {
+  .res-sticky .res-lq, .res-sticky .res-concl-txt, .res-sticky .res-det { display: none; }
+  .res-sticky .res-concl { margin: 0; position: absolute; right: 10px; bottom: 8px; }
+  .res-sticky .res-crit { position: relative; padding: 8px 10px; }
+  .res-sticky .res-nums { padding-right: 110px; } .res-sticky .rn--val { margin-left: 0; }
+  .res-movil { display: block; }
+}
+@media (max-width: 640px) { .res-sticky .rn { min-width: 44px; padding: 3px 6px; } }

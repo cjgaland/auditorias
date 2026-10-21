@@ -12,8 +12,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.03";
+  const APP_VERSION = "2026.04";
   const NOVEDADES = [
+    { version: "2026.04", fecha: "Octubre 2026", titulo: "Recogida de datos y resultados", cambios: [
+      "Nueva fase de Recogida (Hacer): para cada criterio, filas preparadas según la muestra del diseño (con los números sorteados) y botones grandes Sí / No / NA, pensados para el móvil o la tablet.",
+      "Resultado en vivo: cumplimientos, valor del indicador, margen de error al 95 % y decisión LQAS con los n primeros casos.",
+      "La app dice qué se puede afirmar y qué no: con muestras pequeñas, un porcentaje por debajo del estándar no basta para el «no cumple». Con estimación, «no concluyente» si el estándar cae dentro del margen.",
+      "Aviso si un código parece un nombre o un número de historia, y si hay códigos repetidos.",
+      "Evidencia analizada, comentario técnico y observaciones de cada criterio, con propuestas automáticas, e incidencias del método.",
+      "Matriz de resultados en Word, PDF y Excel (resumen, detalle por criterio y anexo con los casos).",
+      "El ejemplo de Urgencias trae los casos y las decisiones LQAS del caso práctico."] },
     { version: "2026.03", fecha: "Octubre 2026", titulo: "Diseño de la auditoría y pilotaje", cambios: [
       "Nueva fase de Diseño en cada auditoría, en seis pasos: indicadores, evidencias e instrumentos, muestra, metodología y equipo, hoja de recogida y pilotaje, y plan específico.",
       "Un indicador por criterio con fórmula, sentido, estándar y la definición de «cumple si…» y «no aplica si…». Se pueden importar desde la app Indicadores.",
@@ -130,8 +138,8 @@
   }
 
   // ---------- Línea del ciclo PDCA (en toda la app) ----------
-  const ENTREGA = 3;   // fases de la app ya construidas (ver L.FASES[].entrega)
-  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/plan", diseno: "#/auditorias", hacer: "#/aprende/4", verificar: "#/aprende/5", actuar: "#/aprende/6" };
+  const ENTREGA = 4;   // fases de la app ya construidas (ver L.FASES[].entrega)
+  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/plan", diseno: "#/auditorias", hacer: "#/auditorias", verificar: "#/aprende/5", actuar: "#/aprende/6" };
   const disponible = f => f.entrega <= ENTREGA;
   function lineaPDCA(actualK) {
     return `<ol class="pdca-linea no-print" aria-label="Fases del ciclo de mejora">${L.FASES.map(f => `<li><a href="${FASE_HREF[f.k]}" class="pdca-paso pdca--${f.pdca}${f.k === actualK ? " actual" : ""}${disponible(f) ? "" : " prox"}"${f.k === actualK ? ' aria-current="step"' : ""} title="${esc(L.PDCA[f.pdca] + " · " + f.titulo + (disponible(f) ? "" : " (próximamente)"))}"><span class="pdca-num">${f.n}</span><span class="pdca-lbl">${f.corto}</span></a></li>`).join("")}</ol>`;
@@ -454,9 +462,9 @@
     { k: "verificar", corto: "Informe", pdca: "V" }, { k: "actuar", corto: "Mejora", pdca: "A" }
   ];
   function pasosAud(a, actual = "inicio") {
-    const p = L.progresoInicio(a), gd = L.progresoDiseno(a);
-    const hecho = { inicio: p.hechos === p.total, diseno: [1, 2, 3, 4, 5].every(k => gd[k]) };
-    const href = { inicio: `#/auditoria/${a.id}`, diseno: `#/auditoria/${a.id}/diseno/1` };
+    const p = L.progresoInicio(a), gd = L.progresoDiseno(a), pr = L.progresoRecogida(a);
+    const hecho = { inicio: p.hechos === p.total, diseno: [1, 2, 3, 4, 5].every(k => gd[k]), hacer: pr.total > 0 && pr.completos === pr.total };
+    const href = { inicio: `#/auditoria/${a.id}`, diseno: `#/auditoria/${a.id}/diseno/1`, hacer: `#/auditoria/${a.id}/recogida` };
     return `<ol class="wiz-steps" aria-label="Fases de la auditoría">${PASOS_AUD.map((s, i) => { const disp = !!href[s.k], act = s.k === actual, cls = `wiz-step pdca--${s.pdca}${act ? " actual" : ""}${disp ? "" : " prox"}${hecho[s.k] && !act ? " hecho" : ""}`, ins = `<span class="wiz-num">${hecho[s.k] && !act ? "✓" : i + 1}</span><span class="wiz-lbl">${s.corto}</span>`;
       return `<li>${disp ? `<a href="${href[s.k]}" class="${cls}"${act ? ' aria-current="step"' : ""}>${ins}</a>` : `<span class="${cls}" title="Próximamente">${ins}</span>`}</li>`; }).join("")}</ol>`;
   }
@@ -586,10 +594,11 @@
   function refrescarAud() {
     const a = actualAud; if (!a) return;
     if (faseAud === "diseno") { refrescarDis(); return; }
+    if (faseAud === "recogida") { refrescarRec(); return; }
     const z = $("[data-zona='resumen-aud']"); if (z) z.innerHTML = resumenAud(a);
     const st = $(".wiz-steps"); if (st) st.outerHTML = pasosAud(a);
   }
-  function repintarAud() { const y = window.scrollY; if (faseAud === "diseno") renderDiseno(actualAud, subDiseno); else renderAuditoria(actualAud); window.scrollTo(0, y); }
+  function repintarAud() { const y = window.scrollY; if (faseAud === "diseno") renderDiseno(actualAud, subDiseno); else if (faseAud === "recogida") renderRecogida(actualAud, critRecogida); else renderAuditoria(actualAud); window.scrollTo(0, y); }
 
   // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
   function bloquesHtml(bloques) {
@@ -1106,7 +1115,7 @@
       <h3 class="resumen-nombre">${lleno(a.titulo) ? esc(a.titulo) : '<span class="vacio">Sin título</span>'}</h3>
       <div class="badges"><span class="badge">${plural(a.criterios.length, "criterio", "criterios")}</span>${w ? `<span class="badge badge--aviso">⚠ ${plural(w, "aviso", "avisos")}</span>` : ""}</div>
       <ul class="check-lista">${PASOS_DIS.slice(0, 5).map(s => `<li class="${g[s.n] ? "ok" : ""}">${g[s.n] ? "✓" : "○"} ${s.titulo}</li>`).join("")}</ul>
-      <p class="res-prox"><b>Lo que viene:</b> la recogida de datos (fase Hacer), en la próxima versión.</p>
+      <p class="res-prox"><b>Después:</b> la <a href="#/auditoria/${a.id}/recogida">recogida de datos</a> (fase Hacer).</p>
     </div>`;
   }
   function renderDiseno(a, sub) {
@@ -1126,7 +1135,7 @@
           ${RENDER_DIS[sub](a)}
           <div class="wiz-nav no-print">
             ${sub > 1 ? `<a class="btn" href="#/auditoria/${a.id}/diseno/${sub - 1}">← Anterior</a>` : `<a class="btn" href="#/auditoria/${a.id}">← Inicio</a>`}
-            ${sub < 6 ? `<a class="btn btn--primary" href="#/auditoria/${a.id}/diseno/${sub + 1}">Siguiente: ${PASOS_DIS[sub].corto} →</a>` : `<span class="btn btn--deshab" aria-disabled="true">Siguiente: Recogida (próximamente)</span>`}
+            ${sub < 6 ? `<a class="btn btn--primary" href="#/auditoria/${a.id}/diseno/${sub + 1}">Siguiente: ${PASOS_DIS[sub].corto} →</a>` : `<a class="btn btn--primary" href="#/auditoria/${a.id}/recogida">Siguiente: Recogida →</a>`}
           </div>
         </div>
         <aside class="wiz-side no-print" data-zona="resumen-dis">${resumenDis(a)}</aside>
@@ -1141,6 +1150,138 @@
     const z = $("[data-zona='resumen-dis']"); if (z) z.innerHTML = resumenDis(a);
     const av = $("[data-zona='avisos-dis']"); if (av) av.innerHTML = avisosDisHtml(a, subDiseno);
     const st = $$(".wiz-steps")[1]; if (st) st.outerHTML = pasosDisHtml(a, subDiseno);
+  }
+
+  // ---------- Auditoría: recogida de datos (entrega 4) ----------
+  let critRecogida = null;
+  const ESTADO_ICO = { verde: "●", rojo: "●", ambar: "●", gris: "○" };
+  const semaforo = r => `<span class="sem-b sem-b--${r.estado}">${ESTADO_ICO[r.estado]} ${esc(r.lqas && r.lqas.acepta != null ? (r.lqas.acepta ? "Se acepta" : "Se rechaza") : L.ESTADO_TXT[r.estado])}</span>`;
+  function barraProgreso(r) {
+    const plan = Number.isFinite(r.planificados) ? r.planificados : Math.max(r.n, 1), p = Math.min(100, Math.round(r.n / plan * 100));
+    return `<div class="rc-barra" title="${r.n} de ${plan} casos"><i style="width:${p}%"></i></div><span class="rc-cuenta">${r.n} de ${Number.isFinite(r.planificados) ? r.planificados : "?"} casos${r.na ? ` · ${r.na} NA` : ""}${r.pend ? ` · ${r.pend} sin valorar` : ""}</span>`;
+  }
+  function resultadoHtml(c) {
+    const r = L.resultadoCriterio(c);
+    if (!r.total) return `<p class="field-sub">Aún no hay casos. Prepara las filas y empieza a marcar.</p>`;
+    const lq = r.lqas ? `<div class="res-lq"><b>LQAS</b> n = ${r.lqas.n}, c = ${r.lqas.c}: ${r.lqas.faltan ? `llevas ${r.n}; faltan ${r.lqas.faltan}` : `cumplen ${r.lqas.cumplenN} de los ${r.lqas.n} primeros`}</div>` : "";
+    return `<div class="res-crit res-crit--${r.estado}">
+      <div class="res-nums"><span class="rn rn--si"><b>${r.si}</b>Sí</span><span class="rn rn--no"><b>${r.no}</b>No</span><span class="rn"><b>${r.na}</b>NA</span>${r.n ? `<span class="rn rn--val"><b>${L.nfmt(r.valor, 1)} %</b>${c.ind.sentido === "menos" ? "fallos" : "cumple"}${Number.isFinite(r.margen) && c.muestra.objetivo !== "todos" ? ` · ±${L.nfmt(r.margen, 0)}` : ""}</span>` : ""}</div>
+      ${lq}
+      <p class="res-concl">${semaforo(r)} <span class="res-concl-txt">${esc(r.conclusion.replace(/^(Se acepta|Se rechaza|Cumple|No cumple|No concluyente): /, ""))}</span></p>
+      ${r.detalle ? `<p class="res-det">${esc(r.detalle)}</p>` : ""}
+    </div>`;
+  }
+  function avisosRecHtml(a, cid) { return L.avisosRecogida(a).filter(x => !cid || x.criterio === cid).filter(x => cid || x.nivel !== "nota" || !x.criterio).map(avisoHtml).join(""); }
+  function resumenRec(a) {
+    const p = L.progresoRecogida(a);
+    return `<div class="resumen">
+      <div class="res-label">Recogida de datos</div>
+      <h3 class="resumen-nombre">${lleno(a.titulo) ? esc(a.titulo) : '<span class="vacio">Sin título</span>'}</h3>
+      <p class="res-sub">${p.completos} de ${p.total} criterios con resultado</p>
+      <div class="sem-resumen"><span class="sem-b sem-b--verde">● ${p.verdes}</span><span class="sem-b sem-b--rojo">● ${p.rojos}</span><span class="sem-b sem-b--ambar">● ${p.ambar}</span></div>
+      <ul class="check-lista">${a.criterios.map((c, i) => { const r = L.resultadoCriterio(c); return `<li><a href="#/auditoria/${a.id}/recogida/${c.id}" class="sem-l sem-l--${r.estado}">${ESTADO_ICO[r.estado]} ${i + 1}. ${esc(L.corto(c.subproceso || c.criterio, 34))}</a></li>`; }).join("")}</ul>
+      <p class="res-prox"><b>Lo que viene:</b> interpretar los resultados, buscar las causas y redactar el informe (próxima versión).</p>
+    </div>`;
+  }
+  function matrizHtml(a) {
+    return `<div class="table-wrap"><table class="mini tabla-matriz"><thead><tr><th>Nº</th><th>Subproceso</th><th>Indicador</th><th>Estándar</th><th>Resultado</th><th>Conclusión</th></tr></thead><tbody>
+      ${a.criterios.map((c, i) => { const r = L.resultadoCriterio(c); return `<tr><td>${i + 1}</td><td>${esc(c.subproceso)}</td><td>${esc(c.ind.nombre || c.criterio)}</td><td>${esc(L.textoEstandar(c.ind))}</td><td>${r.n ? esc(r.textoValor) : "—"}</td><td>${semaforo(r)}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  }
+
+  function renderRecogidaResumen(a) {
+    const E = a.ejecucion;
+    return `
+      <div class="wiz-titulo"><span class="wiz-paso">Paso 3 de 5 · Hacer</span><h1 class="page-title">Recogida de datos</h1></div>
+      ${idea("Ahora toca mirar los casos. Para cada uno, marca si <b>cumple</b> el criterio (Sí), <b>no lo cumple</b> (No) o <b>no aplica</b> (NA). La app va calculando el resultado y te dice qué puedes afirmar… y qué no.")}
+      ${facil(`<ul><li>Usa la <b>hoja de recogida</b> del diseño (en papel o en el móvil) y aplica la definición de «cumple si…» al pie de la letra.</li>
+        <li><b>NA</b> (no aplica) no cuenta: sale del numerador y del denominador.</li>
+        <li>Con <b>LQAS</b> se decide con los <b>n primeros</b> casos valorados, en el orden del sorteo: si cumplen c o más, se acepta.</li>
+        <li>Con <b>estimación</b>, solo se afirma «cumple» o «no cumple» si el estándar queda fuera del margen de error; si cae dentro, el resultado es <b>no concluyente</b>.</li>
+        <li>Anota las incidencias del método (casos difíciles de valorar, datos que no estaban donde se esperaba): servirán para el informe y para la próxima vez.</li></ul>
+        ${trampa("Nunca escribas nombres ni números de historia: solo códigos (HC-01…). La app avisa si un código lo parece.")}`)}
+      <div data-zona="avisos-rec">${avisosRecHtml(a)}</div>
+      <div class="card">
+        <h2 class="sub-h">Datos de la recogida</h2>
+        <div class="dos-col">
+          <div class="field"><div class="field-head"><label class="field-label">Inicio</label></div><div class="input-wrap"><input class="txt-in" type="date" data-k="ejecucion.inicio" value="${esc(E.inicio)}" /></div></div>
+          <div class="field"><div class="field-head"><label class="field-label">Fin</label></div><div class="input-wrap"><input class="txt-in" type="date" data-k="ejecucion.fin" value="${esc(E.fin)}" /></div></div>
+        </div>
+        ${campo(a, "ejecucion.auditores", "Quién ha recogido los datos", { ph: "p. ej. Supervisora de Enfermería y Técnico de Calidad" })}
+        ${campo(a, "ejecucion.incidencias", "Incidencias del método", { area: true, opt: true, ph: "p. ej. En 3 historias el registro de triaje estaba en papel escaneado" })}
+      </div>
+      <h2 class="sec-t">Criterios</h2>
+      <div class="rc-lista">${a.criterios.map((c, i) => { const r = L.resultadoCriterio(c); return `<a class="rc-card sem-borde--${r.estado}" href="#/auditoria/${a.id}/recogida/${c.id}">
+        <span class="rc-cab"><span class="crit-n">${i + 1}</span><b>${esc(c.subproceso) || "Sin subproceso"}</b>${semaforo(r)}</span>
+        <span class="rc-ind">${esc(c.ind.nombre || c.criterio)}</span>
+        ${barraProgreso(r)}
+        <span class="rc-ir">Recoger datos →</span>
+      </a>`; }).join("") || `<p class="placeholder-box">La auditoría no tiene criterios. <a href="#/auditoria/${a.id}">Añádelos en el Inicio</a>.</p>`}</div>
+      <h2 class="sec-t">Matriz de resultados</h2>
+      <div data-zona="matriz">${matrizHtml(a)}</div>
+      <div class="toolbar no-print"><button class="btn btn--primary" data-act="res-word">⬇ Matriz de resultados (Word)</button><button class="btn" data-act="informe">Ver para imprimir / PDF</button><button class="btn" data-act="res-excel">Exportar a Excel</button></div>`;
+  }
+
+  function filaCaso(c, x, j) {
+    const b = f => `data-caso="${c.id}" data-i="${j}" data-f="${f}"`;
+    return `<div class="caso caso--${x.valor || "vacio"}" data-fila="${j}">
+      <span class="caso-n">${j + 1}</span>
+      <input class="txt-in caso-cod" ${b("codigo")} value="${esc(x.codigo)}" placeholder="Código" autocomplete="off" aria-label="Código del caso ${j + 1}" />
+      <span class="caso-seg" role="group" aria-label="¿Cumple?">${[["si", "Sí"], ["no", "No"], ["na", "NA"]].map(([v, t]) => `<button type="button" class="${x.valor === v ? "active" : ""}" data-act="valor" data-c="${c.id}" data-i="${j}" data-v="${v}">${t}</button>`).join("")}</span>
+      <input class="txt-in caso-obs" ${b("obs")} value="${esc(x.obs)}" placeholder="Observación" autocomplete="off" aria-label="Observación del caso ${j + 1}" />
+      ${x.listado ? `<span class="caso-lis" title="Número en el listado (sorteo)">#${esc(x.listado)}</span>` : ""}
+    </div>`;
+  }
+  function renderRecogidaCriterio(a, c) {
+    const i = a.criterios.indexOf(c), r = L.resultadoCriterio(c), m = L.calcMuestra(c), nPrep = Number.isFinite(m.n) ? Math.min(m.n, 200) : 10;
+    const prev = a.criterios[i - 1], next = a.criterios[i + 1];
+    const f = (k, v) => lleno(v) ? `<tr><th>${k}</th><td>${escMl(v)}</td></tr>` : "";
+    return `
+      <div class="wiz-top no-print">${volver(`#/auditoria/${a.id}/recogida`, "Todos los criterios")}<div class="tema-pills crit-pills">${a.criterios.map((x, k) => { const rx = L.resultadoCriterio(x); return `<a href="#/auditoria/${a.id}/recogida/${x.id}" class="sem-p sem-p--${rx.estado}${x === c ? " actual" : ""}" title="${esc(x.subproceso)}">${k + 1}</a>`; }).join("")}</div></div>
+      <div class="wiz-titulo"><span class="wiz-paso">Recogida · criterio ${i + 1} de ${a.criterios.length}</span><h1 class="page-title">${esc(c.subproceso) || "Criterio " + (i + 1)}</h1></div>
+      <details class="facil recordatorio"${r.total ? "" : " open"}><summary>Recordatorio: qué mirar</summary><div class="facil-body"><table class="ficha-t">
+        ${f("Criterio", c.criterio)}${f("Indicador", c.ind.nombre)}${f("Estándar", L.textoEstandar(c.ind))}${f("Cumple si…", c.ind.cumpleSi)}${f("No aplica si…", c.ind.noAplicaSi)}${f("Dónde mirar", c.ind.fuente)}${f("Muestra", m.texto)}
+      </table></div></details>
+      <div data-zona="res-crit" class="res-sticky">${resultadoHtml(c)}</div>
+      <div data-zona="avisos-rec">${avisosRecHtml(a, c.id)}</div>
+      <h2 class="sec-t">Casos <span class="contador" data-zona="ncasos">${c.recogida.casos.length}</span></h2>
+      ${c.recogida.casos.length ? `<div class="casos" data-zona="casos">${c.recogida.casos.map((x, j) => filaCaso(c, x, j)).join("")}</div>` : `<div class="placeholder-box"><p>Prepara las filas según la muestra del diseño (${nPrep} casos${c.muestra.sorteo.length ? ", con los números sorteados" : ""}) o añádelas una a una.</p></div>`}
+      <div class="toolbar no-print">
+        ${c.recogida.casos.length ? "" : `<button class="btn btn--primary" data-act="casos-preparar" data-c="${c.id}" data-n="${nPrep}">Preparar ${nPrep} filas</button>`}
+        <button class="btn" data-act="casos-add" data-c="${c.id}" data-n="1">+ 1 caso</button>
+        <button class="btn" data-act="casos-add" data-c="${c.id}" data-n="5">+ 5 casos</button>
+        ${c.recogida.casos.some(x => !x.valor && !lleno(x.obs)) ? `<button class="btn btn--peligro-ghost" data-act="casos-limpiar" data-c="${c.id}">Quitar filas sin valorar</button>` : ""}
+      </div>
+      <div data-zona="res-crit" class="res-movil">${resultadoHtml(c)}</div>
+      <h2 class="sec-t">Evidencia y comentario</h2>
+      <div class="card">
+        ${campo(c, "recogida.evidencia", "Evidencia analizada", { bind: cb(c, "recogida.evidencia"), area: true, ph: "p. ej. Registros de triaje de 10 pacientes seleccionados al azar", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-evid" data-c="${c.id}">✎ Proponer</button></div>` })}
+        ${campo(c, "recogida.comentario", "Comentario técnico", { bind: cb(c, "recogida.comentario"), area: true, rows: 3, ph: "Qué significa el resultado frente al estándar", help: "Una o dos frases neutrales: el resultado, el estándar y lo que se puede (o no se puede) afirmar con esta muestra.", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-coment" data-c="${c.id}">✎ Proponer a partir del resultado</button></div>` })}
+        ${campo(c, "recogida.observaciones", "Observaciones del auditor", { bind: cb(c, "recogida.observaciones"), area: true, opt: true, ph: "p. ej. Fue necesario revisar varios apartados de la historia" })}
+      </div>
+      <div class="wiz-nav no-print">
+        ${prev ? `<a class="btn" href="#/auditoria/${a.id}/recogida/${prev.id}">← Criterio ${i}</a>` : `<a class="btn" href="#/auditoria/${a.id}/recogida">← Resumen</a>`}
+        ${next ? `<a class="btn btn--primary" href="#/auditoria/${a.id}/recogida/${next.id}">Criterio ${i + 2} →</a>` : `<a class="btn btn--primary" href="#/auditoria/${a.id}/recogida">Ver la matriz →</a>`}
+      </div>`;
+  }
+  function renderRecogida(a, cid) {
+    actualAud = a; actualMapa = null; actualPlan = null; faseAud = "recogida"; critRecogida = cid || null; nAyuda = 0;
+    if (document.body.classList.contains("ver-informe")) {
+      view.innerHTML = `${informeBar()}<div class="doc-prev doc-prev--informe">${bloquesHtml(L.documentoResultados(a, new Date().toLocaleDateString("es-ES")).bloques)}</div>${informePie()}`;
+      return;
+    }
+    const c = cid && a.criterios.find(x => x.id === cid);
+    if (cid && !c) { location.hash = `#/auditoria/${a.id}/recogida`; return; }
+    view.innerHTML = c ? `<div class="wiz-top no-print">${pasosAud(a, "hacer")}</div>${renderRecogidaCriterio(a, c)}` : `
+      <div class="wiz-top no-print">${volver(modoEjemplo ? "#/ejemplos" : "#/auditorias", modoEjemplo ? "Ejemplos" : "Mis auditorías")}${pasosAud(a, "hacer")}</div>
+      <div class="wiz-grid"><div class="wiz-main">${renderRecogidaResumen(a)}</div><aside class="wiz-side no-print" data-zona="resumen-rec">${resumenRec(a)}</aside></div>`;
+  }
+  function refrescarRec() {
+    const a = actualAud; if (!a) return;
+    const c = critRecogida && a.criterios.find(x => x.id === critRecogida);
+    const Z = { "res-crit": () => c ? resultadoHtml(c) : "", "avisos-rec": () => avisosRecHtml(a, c ? c.id : null), "resumen-rec": () => resumenRec(a), matriz: () => matrizHtml(a), ncasos: () => c ? String(c.recogida.casos.length) : "" };
+    $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
+    if (c) $$(".crit-pills a").forEach((el, k) => { const rx = L.resultadoCriterio(a.criterios[k]); el.className = el.className.replace(/sem-p--\S+/, "sem-p--" + rx.estado); });
   }
 
   // ---------- Ejemplos ----------
@@ -1357,7 +1498,7 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
   }
-  function irInforme() { location.hash = (actualPlan ? `#/plan/${actualPlan.id}/6` : actualAud && faseAud === "diseno" ? `#/auditoria/${actualAud.id}/diseno/6` : rutaActual()) + "?informe=1"; }
+  function irInforme() { location.hash = (actualPlan ? `#/plan/${actualPlan.id}/6` : actualAud && faseAud === "diseno" ? `#/auditoria/${actualAud.id}/diseno/6` : actualAud && faseAud === "recogida" ? `#/auditoria/${actualAud.id}/recogida` : rutaActual()) + "?informe=1"; }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
     if (!document.body.classList.contains("ver-informe")) { irInforme(); setTimeout(() => window.print(), 400); return; }
@@ -1496,6 +1637,7 @@
       const a = buscaAud(partes[1]) || borradores.get(partes[1]);
       if (!a) noEncontrado("esa auditoría", "#/auditorias", "Ir a mis auditorías");
       else if (partes[2] === "diseno") renderDiseno(a, informe ? 6 : Math.min(6, Math.max(1, parseInt(partes[3], 10) || 1)));
+      else if (partes[2] === "recogida") renderRecogida(a, informe ? null : partes[3]);
       else renderAuditoria(a);
       navR = "auditorias";
     } else if (partes[0] === "auditorias") renderAuditorias();
@@ -1543,6 +1685,10 @@
     if (t.dataset.c) {
       const c = buscaCrit(t.dataset.c); if (!c) return;
       setPath(c, t.dataset.f, t.value); tocado(actualAud); refrescarAud(); return;
+    }
+    if (t.dataset.caso) {
+      const c = buscaCrit(t.dataset.caso), x = c && c.recogida.casos[Number(t.dataset.i)]; if (!x) return;
+      x[t.dataset.f] = t.value; tocado(actualAud); refrescarAud(); return;
     }
     if (t.dataset.e) {
       const e = buscaEnt(t.dataset.e); if (!e) return;
@@ -1854,6 +2000,39 @@
       const h = au.hitos[b.dataset.k]; if (!h) return;
       h.hecho = !h.hecho; if (h.hecho && !lleno(h.fecha)) h.fecha = new Date().toISOString().slice(0, 10);
       tocado(au); repintarAud();
+    }
+    // --- Recogida de datos ---
+    else if (a === "valor" && au) {
+      const c = buscaCrit(b.dataset.c), j = Number(b.dataset.i), x = c && c.recogida.casos[j]; if (!x) return;
+      x.valor = x.valor === b.dataset.v ? "" : b.dataset.v; tocado(au);
+      const fila = b.closest(".caso"); if (fila) { fila.className = `caso caso--${x.valor || "vacio"}`; $$("[data-act='valor']", fila).forEach(z => z.classList.toggle("active", z.dataset.v === x.valor)); }
+      refrescarAud();
+      // Al marcar, si la fila siguiente queda tapada por la barra inferior, se acerca
+      const sigFila = fila && fila.nextElementSibling;
+      if (x.valor && sigFila && !c.recogida.casos[j + 1].valor && sigFila.getBoundingClientRect().bottom > window.innerHeight - 90) sigFila.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    else if (a === "casos-preparar" && au) { const c = buscaCrit(b.dataset.c); if (!c) return; c.recogida.casos = L.prepararCasos(c, Number(b.dataset.n)); tocado(au); repintarAud(); }
+    else if (a === "casos-add" && au) {
+      const c = buscaCrit(b.dataset.c); if (!c) return; const n0 = c.recogida.casos.length, pref = n0 ? String(c.recogida.casos[n0 - 1].codigo).replace(/[-\s]?\d+$/, "") || "HC" : "HC";
+      for (let k = 0; k < Number(b.dataset.n); k++) { const num = n0 + k + 1; c.recogida.casos.push(L.nuevoCaso(`${pref}-${String(num).padStart(2, "0")}`, c.muestra.sorteo[num - 1] ? String(c.muestra.sorteo[num - 1]) : "")); }
+      tocado(au); repintarAud();
+    }
+    else if (a === "casos-limpiar" && au) { const c = buscaCrit(b.dataset.c); if (!c) return; c.recogida.casos = c.recogida.casos.filter(x => x.valor || lleno(x.obs)); tocado(au); repintarAud(); }
+    else if (a === "sug-evid" && au) {
+      const c = buscaCrit(b.dataset.c); if (!c) return;
+      const hacer = () => { c.recogida.evidencia = L.sugerirEvidencia(c); tocado(au); repintarAud(); };
+      if (lleno(c.recogida.evidencia)) confirmar("<p>Se sustituirá el texto que has escrito.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (a === "sug-coment" && au) {
+      const c = buscaCrit(b.dataset.c); if (!c) return; const r = L.resultadoCriterio(c);
+      if (!r.n) { toast("Valora primero algún caso.", 3000); return; }
+      const hacer = () => { c.recogida.comentario = [r.conclusion, r.detalle].filter(lleno).join(" "); tocado(au); repintarAud(); };
+      if (lleno(c.recogida.comentario)) confirmar("<p>Se sustituirá el comentario que has escrito.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (a === "res-word" && au) descargarWord(L.documentoResultados(au, new Date().toLocaleDateString("es-ES")), `Matriz de resultados ${(au.titulo || "").slice(0, 50).replace(/[\\/:*?"<>|%]/g, "")} ${fechaArchivo()}.docx`);
+    else if (a === "res-excel" && au) {
+      try { const bytes = window.Xlsx.construirLibroXlsx(L.hojasExcelRecogida(au, new Date().toLocaleDateString("es-ES"))); compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Resultados ${(au.titulo || "").slice(0, 50).replace(/[\\/:*?"<>|%]/g, "")} ${fechaArchivo()}.xlsx`, "Excel descargado."); }
+      catch (e2) { toast("No se ha podido crear el Excel.", 4000); }
     }
     // --- Generales ---
     else if (a === "informe") irInforme();
