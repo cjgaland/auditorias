@@ -12,8 +12,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.01";
+  const APP_VERSION = "2026.02";
   const NOVEDADES = [
+    { version: "2026.02", fecha: "Octubre 2026", titulo: "Plan Anual de Auditorías y documentos Word", cambios: [
+      "Nuevo Plan Anual en seis pasos: qué se audita (trae los hallazgos clave del Mapa de Riesgos agrupados por subproceso), alcance y criterios, frecuencia propuesta según el IPR, responsables y recursos, cronograma de 12 meses, y roles y aprobación.",
+      "Cronograma con reparto automático: respeta la frecuencia, evita los meses de alta presión que marques y la capacidad del equipo auditor, y avisa de solapamientos.",
+      "Documentos en Word editable (Plan Anual y Mapa de Riesgos), además de PDF y Excel, con control del documento: elaborado, revisado, aprobado e histórico de revisiones.",
+      "Cada auditoría del plan se convierte en auditoría concreta con un clic, con su alcance y sus hallazgos.",
+      "Hitos de cada auditoría: aprobación por la Dirección, comunicación a los auditados, validación del borrador y reunión de devolución.",
+      "Auditorías de seguimiento en el plan y aviso si no se reserva hueco para comprobar las mejoras.",
+      "Ejemplo nuevo: el Plan Anual del Servicio de Urgencias."] },
     { version: "2026.01", fecha: "Octubre 2026", titulo: "Primera versión: el punto de partida", cambios: [
       "Panel de inicio con la línea del ciclo de mejora (Planificar, Hacer, Verificar, Actuar) y «Tu siguiente paso».",
       "Mapa de Riesgos: riesgos por subproceso con gravedad, ocurrencia y detección, IPR automático, prioridad por colores, gráfico y avisos de las trampas más habituales.",
@@ -41,12 +49,12 @@
 
   // ---------- Datos (solo en este dispositivo) ----------
   const KEY_DATOS = "auditorias-datos";
-  let datos = { mapas: [], auditorias: [], ultimaCopia: null };
+  let datos = { mapas: [], auditorias: [], planes: [], ultimaCopia: null };
   (function cargar() {
     const crudo = leer(KEY_DATOS); if (!crudo) return;
     try {
       const o = JSON.parse(crudo), s = L.sanearDatos(o, genId, hoy());
-      if (s) datos = { mapas: s.mapas, auditorias: s.auditorias, ultimaCopia: typeof o.ultimaCopia === "string" ? o.ultimaCopia : null };
+      if (s) datos = { mapas: s.mapas, auditorias: s.auditorias, planes: s.planes, ultimaCopia: typeof o.ultimaCopia === "string" ? o.ultimaCopia : null };
     } catch (e) { /* datos dañados: se empieza de cero sin borrar lo guardado */ }
   })();
   // Los datos del usuario son los únicos que se guardan. Los ejemplos viven aparte, en memoria
@@ -55,14 +63,14 @@
   let datosEjemplo = null, modoEjemplo = false;
   const esIdEjemplo = id => /^ej-/.test(id || "");
   function ejemplos() {
-    if (!datosEjemplo) datosEjemplo = { mapas: clon(C.EJEMPLOS.mapas), auditorias: clon(C.EJEMPLOS.auditorias), ultimaCopia: null };
+    if (!datosEjemplo) datosEjemplo = { mapas: clon(C.EJEMPLOS.mapas), auditorias: clon(C.EJEMPLOS.auditorias), planes: clon(C.EJEMPLOS.planes), ultimaCopia: null };
     return datosEjemplo;
   }
   let tGuardar = null, avisoSinEspacio = false;
   function guardar(inmediato) {
     clearTimeout(tGuardar);
     const fn = () => {
-      const ok = escribir(KEY_DATOS, JSON.stringify({ app: "auditorias", v: L.VERSION_DATOS, ultimaCopia: datosUsuario.ultimaCopia, mapas: datosUsuario.mapas, auditorias: datosUsuario.auditorias }));
+      const ok = escribir(KEY_DATOS, JSON.stringify({ app: "auditorias", v: L.VERSION_DATOS, ultimaCopia: datosUsuario.ultimaCopia, mapas: datosUsuario.mapas, auditorias: datosUsuario.auditorias, planes: datosUsuario.planes }));
       if (!ok && !avisoSinEspacio) { avisoSinEspacio = true; toast("No se ha podido guardar en este navegador (¿modo privado o sin espacio?). Haz una copia de seguridad.", 6000); }
     };
     if (inmediato) fn(); else tGuardar = setTimeout(fn, 250);
@@ -114,8 +122,9 @@
   }
 
   // ---------- Línea del ciclo PDCA (en toda la app) ----------
-  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/aprende/2", diseno: "#/aprende/3", hacer: "#/aprende/4", verificar: "#/aprende/5", actuar: "#/aprende/6" };
-  const disponible = f => f.entrega <= 1;
+  const ENTREGA = 2;   // fases de la app ya construidas (ver L.FASES[].entrega)
+  const FASE_HREF = { riesgos: "#/riesgos", plan: "#/plan", diseno: "#/aprende/3", hacer: "#/aprende/4", verificar: "#/aprende/5", actuar: "#/aprende/6" };
+  const disponible = f => f.entrega <= ENTREGA;
   function lineaPDCA(actualK) {
     return `<ol class="pdca-linea no-print" aria-label="Fases del ciclo de mejora">${L.FASES.map(f => `<li><a href="${FASE_HREF[f.k]}" class="pdca-paso pdca--${f.pdca}${f.k === actualK ? " actual" : ""}${disponible(f) ? "" : " prox"}"${f.k === actualK ? ' aria-current="step"' : ""} title="${esc(L.PDCA[f.pdca] + " · " + f.titulo + (disponible(f) ? "" : " (próximamente)"))}"><span class="pdca-num">${f.n}</span><span class="pdca-lbl">${f.corto}</span></a></li>`).join("")}</ol>`;
   }
@@ -141,7 +150,7 @@
 
   // ---------- Inicio ----------
   function renderHome() {
-    const d = datosUsuario, sig = L.siguientePaso(d), n = d.mapas.length + d.auditorias.length;
+    const d = datosUsuario, sig = L.siguientePaso(d), n = d.mapas.length + d.auditorias.length + d.planes.length;
     const diasCopia = d.ultimaCopia ? Math.floor((Date.now() - new Date(d.ultimaCopia)) / 864e5) : null;
     const avisoCopia = n && (diasCopia === null || diasCopia > 30)
       ? `<div class="warn">⚠ ${diasCopia === null ? "Aún no has hecho ninguna copia de seguridad." : `Tu última copia de seguridad es de hace ${diasCopia} días.`} Tus datos solo están en este dispositivo: guarda una copia.</div>` : "";
@@ -173,6 +182,7 @@
       <div class="card datos-card">
         <div class="datos-cifras">
           <a href="#/riesgos"><b>${d.mapas.length}</b><span>${d.mapas.length === 1 ? "mapa de riesgos" : "mapas de riesgos"}</span></a>
+          <a href="#/plan"><b>${d.planes.length}</b><span>${d.planes.length === 1 ? "plan anual" : "planes anuales"}</span></a>
           <a href="#/auditorias"><b>${d.auditorias.length}</b><span>${d.auditorias.length === 1 ? "auditoría" : "auditorías"}</span></a>
         </div>
         ${avisoCopia}
@@ -300,7 +310,7 @@
       ${claves.map(r => `<tr><td>${esc(r.subproceso)}</td><td><b>${esc(r.fallo)}</b></td><td>${iprBadge(L.iprDe(r))}</td><td>${esc(r.accion) || '<span class="falta">Falta</span>'}</td><td>${esc(r.evidencia) || '<span class="falta">Falta</span>'}</td><td>${esc(r.motivo) || '<span class="falta">Falta</span>'}</td></tr>`).join("")}
     </tbody></table></div>
     <div class="toolbar no-print">${audEj ? `<a class="btn btn--primary" href="#/auditoria/${audEj.id}">Ver la auditoría de este ejemplo →</a>`
-      : modoEjemplo ? "" : `<a class="btn btn--primary" href="#/auditoria/nueva?mapa=${m.id}">Crear una auditoría con ${claves.length === 1 ? "este hallazgo" : "estos " + claves.length + " hallazgos"} →</a>${yaAud.map(a => `<a class="btn" href="#/auditoria/${a.id}">Abrir «${esc(L.corto(a.titulo || "auditoría sin título", 40))}»</a>`).join("")}`}</div>`;
+      : modoEjemplo ? "" : `${datos.planes.some(p => p.entradas.some(e => e.mapaId === m.id)) ? "" : `<a class="btn btn--primary" href="#/plan/nuevo?mapa=${m.id}">Llevarlos al Plan Anual →</a>`}<a class="btn" href="#/auditoria/nueva?mapa=${m.id}">Crear una auditoría con ${claves.length === 1 ? "este hallazgo" : "estos " + claves.length + " hallazgos"} →</a>${yaAud.map(a => `<a class="btn" href="#/auditoria/${a.id}">Abrir «${esc(L.corto(a.titulo || "auditoría sin título", 40))}»</a>`).join("")}`}</div>`;
   }
 
   function pegarHtml() {
@@ -365,6 +375,7 @@
       <div data-zona="claves">${clavesHtml(m)}</div>
       <div class="toolbar no-print sep-arriba">
         <button class="btn" data-act="informe">Ver informe / PDF</button>
+        <button class="btn" data-act="mapa-word">⬇ Word</button>
         <button class="btn" data-act="mapa-excel">Exportar a Excel</button>
         ${modoEjemplo ? "" : `<button class="btn" data-act="mapa-dup" data-id="${m.id}">Duplicar</button><button class="btn btn--peligro-ghost" data-act="mapa-del" data-id="${m.id}">Borrar mapa</button>`}
       </div>`;
@@ -483,6 +494,13 @@
       <div class="toolbar no-print"><button class="btn" data-act="crit-add">+ Añadir criterio</button></div>`;
   }
 
+  function hitosHtml(a) {
+    return L.HITOS.map(h => { const v = a.hitos[h.k]; return `<div class="hito${v.hecho ? " hecho" : ""} pdca--${h.pdca}">
+      <button type="button" class="hito-check" data-act="hito" data-k="${h.k}" aria-pressed="${v.hecho}" aria-label="${v.hecho ? "Desmarcar" : "Marcar como hecho"}">${v.hecho ? "✓" : ""}</button>
+      <div class="hito-txt"><b>${h.nom}</b><span>${h.cuando} · ${h.help}</span>
+        <div class="hito-campos"><input class="txt-in" type="date" data-k="hitos.${h.k}.fecha" value="${esc(v.fecha)}" aria-label="Fecha" /><input class="txt-in" data-k="hitos.${h.k}.nota" value="${esc(v.nota)}" placeholder="Nota (opcional)" autocomplete="off" /></div>
+      </div></div>`; }).join("");
+  }
   function resumenAud(a) {
     const p = L.progresoInicio(a), o = L.ORIGENES[a.origen.tipo];
     return `<div class="resumen">
@@ -490,6 +508,7 @@
       <h3 class="resumen-nombre">${lleno(a.titulo) ? esc(a.titulo) : '<span class="vacio">Sin título todavía</span>'}</h3>
       <div class="badges">${o ? `<span class="badge">${o.icono} ${o.nom}</span>` : ""}<span class="badge">${L.TIPOS_AUD[a.tipo]}</span><span class="badge">${L.OBJETOS_AUD[a.objeto].nom}</span></div>
       <ul class="check-lista">${p.items.map(([t, ok]) => `<li class="${ok ? "ok" : ""}">${ok ? "✓" : "○"} ${t}</li>`).join("")}</ul>
+      <ul class="check-lista check-lista--hitos">${L.HITOS.map(h => `<li class="${a.hitos[h.k].hecho ? "ok" : ""}">${a.hitos[h.k].hecho ? "✓" : "○"} ${h.nom}</li>`).join("")}</ul>
       <p class="res-prox"><b>Lo que viene:</b> diseño (indicadores, evidencias, instrumentos y muestra), recogida de datos, informe y plan de mejora. Llegarán en las próximas versiones de la app.</p>
     </div>`;
   }
@@ -501,6 +520,7 @@
       <div class="wiz-grid">
         <div class="wiz-main">
           <div class="wiz-titulo"><span class="wiz-paso">Paso 1 de 5 · Planificar</span><h1 class="page-title">Inicio de la auditoría</h1></div>
+          ${(() => { const pl = buscaPlan(a.planId), en = pl && pl.entradas.find(x => x.id === a.entradaId); return pl ? `<div class="note">📅 Programada en el <a href="#/plan/${pl.id}/1">Plan Anual ${esc(pl.anio)}</a>${en ? ` · «${esc(en.titulo)}» · ${esc(L.textoMeses(en.meses) || "sin meses")}` : ""}.</div>` : ""; })()}
           ${idea("Antes de mirar una sola historia, toda auditoría responde a tres preguntas: <b>¿por qué?</b> (su origen), <b>¿para qué?</b> (su objetivo) y <b>¿qué voy a comprobar?</b> (sus criterios).")}
           <h2 class="sec-t">1 · ¿De dónde nace esta auditoría?</h2>
           ${facil(`<p>No todas las auditorías nacen de un AMFE. Las más habituales en una unidad son:</p><ul>
@@ -519,6 +539,7 @@
               ${campo(a, "centro", "Centro", { opt: true, ph: "p. ej. Hospital…" })}
             </div>
             ${campo(a, "proceso", "Proceso auditado", { area: true, ph: "p. ej. el proceso de admisión en Urgencias hasta la decisión de ingreso", help: "Qué proceso se audita y entre qué puntos. Escríbelo con artículo («el proceso de…», «la conciliación de…»): así se usa en los textos que propone la app." })}
+            ${campo(a, "alcance", "Alcance", { area: true, opt: true, ph: "p. ej. Episodios con decisión de ingreso; de la llegada a la decisión de ingreso (sin el seguimiento en planta)", help: "Qué se audita y hasta dónde: procesos, subprocesos, periodo y pacientes; y qué queda fuera. Si viene del Plan Anual, ya está escrito." })}
             ${campo(a, "titulo", "Título de la auditoría", { ph: "p. ej. Auditoría interna del proceso de admisión en Urgencias", extra: `<div class="quick"><button type="button" class="chip chip--accent" data-act="aud-sug-tit">✎ Proponer título</button></div>` })}
             <div class="field"><div class="field-head"><label class="field-label">¿Quién audita?</label>${ayudaBtn("Interna: profesionales de la propia organización. Externa: una entidad independiente (acreditación, inspección, certificación). Si audita la propia unidad su trabajo (autoauditoría), se pierde algo de independencia: conviene incluir a alguien de fuera del área.").btn}</div><p class="help" id="help-h${nAyuda}" hidden>Interna: profesionales de la propia organización. Externa: una entidad independiente (acreditación, inspección, certificación). Si audita la propia unidad su trabajo (autoauditoría), se pierde algo de independencia: conviene incluir a alguien de fuera del área.</p>
               ${seg(a, "tipo", Object.entries(L.TIPOS_AUD))}</div>
@@ -540,6 +561,9 @@
             <p>Se toma de un protocolo interno, de un estándar de acreditación o de una guía.</p>
             ${ejemplo("del hallazgo al criterio", "<p><b>Hallazgo</b>: «no conciliación de la medicación habitual». <b>Criterio</b>: «se documenta la conciliación de la medicación habitual antes de la prescripción en Urgencias».</p>")}`)}
           <div class="card" data-zona-aud="criterios">${criteriosHtml(a)}</div>
+          <h2 class="sec-t">5 · Hitos de la auditoría</h2>
+          <p class="page-lead">Cuatro momentos que la teoría exige y que se suelen olvidar. Marca cada uno cuando se cumpla.</p>
+          <div class="card">${hitosHtml(a)}</div>
           <div class="wiz-nav no-print">
             <span></span>
             <span class="btn btn--deshab" aria-disabled="true">Siguiente: Diseño (próximamente)</span>
@@ -555,16 +579,338 @@
   }
   function repintarAud() { const y = window.scrollY; renderAuditoria(actualAud); window.scrollTo(0, y); }
 
+  // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
+  function bloquesHtml(bloques) {
+    const celda = (c, cab) => { const o = c !== null && typeof c === "object" ? c : { texto: c }; const st = o.fondo ? ` style="background:#${o.fondo}"` : ""; const cl = [o.centro ? "c" : "", o.negrita ? "b" : ""].filter(Boolean).join(" "); return `<${cab ? "th" : "td"}${cl ? ` class="${cl}"` : ""}${st}>${escMl(o.texto)}</${cab ? "th" : "td"}>`; };
+    return bloques.map(b => {
+      if (b.t === "portada") return `<div class="doc-portada"><h1>${esc(b.titulo)}</h1>${b.sub ? `<p class="doc-sub">${esc(b.sub)}</p>` : ""}${(b.extra || []).map(x => `<p>${esc(x)}</p>`).join("")}</div>`;
+      if (b.t === "h1") return `<h2 class="doc-h1">${esc(b.texto)}</h2>`;
+      if (b.t === "h2") return `<h3 class="doc-h2">${esc(b.texto)}</h3>`;
+      if (b.t === "p") return `<p class="doc-p${b.estilo === "nota" ? " doc-nota" : ""}">${b.runs ? b.runs.map(r => r.negrita ? `<b>${escMl(r.texto)}</b>` : escMl(r.texto)).join("") : escMl(b.texto)}</p>`;
+      if (b.t === "lista") return `<ul class="doc-ul">${b.items.map(i => `<li>${esc(typeof i === "string" ? i : i.texto)}</li>`).join("")}</ul>`;
+      if (b.t === "salto") return `<div class="doc-salto"></div>`;
+      if (b.t === "tabla") {
+        const suma = (b.anchos || []).reduce((a, x) => a + x, 0);
+        const cols = b.anchos ? `<colgroup>${b.anchos.map(w => `<col style="width:${(w / suma * 100).toFixed(1)}%">`).join("")}</colgroup>` : "";
+        return `<div class="table-wrap"><table class="doc-t${b.fuente && b.fuente < 9 ? " doc-t--peq" : ""}">${cols}${b.cab && !b.sinCab ? `<thead><tr>${b.cab.map(c => celda(c, true)).join("")}</tr></thead>` : ""}<tbody>${b.filas.map(f => `<tr>${f.map(c => celda(c, false)).join("")}</tr>`).join("")}</tbody></table></div>`;
+      }
+      return "";
+    }).join("");
+  }
+  function descargarWord(doc, nombre, o = {}) {
+    try {
+      const bytes = window.Docx.construirDocx(Object.assign({ pie: doc.titulo + " · Generado con la app Auditorías" }, doc, o));
+      compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), nombre, "Word descargado. Ábrelo con Word, Pages o LibreOffice y ajústalo a tu gusto.");
+    } catch (e) { toast("No se ha podido crear el Word.", 4000); }
+  }
+
+  // ---------- Plan Anual: lista ----------
+  function renderPlanes() {
+    const lista = datos.planes.slice().sort((a, b) => String(b.anio).localeCompare(String(a.anio)) || String(b.modificado).localeCompare(String(a.modificado)));
+    view.innerHTML = `
+      <div class="wiz-top no-print">${lineaPDCA("plan")}</div>
+      <h1 class="page-title">Plan anual de auditorías</h1>
+      <p class="page-lead">La hoja de ruta del año: qué se audita, con qué alcance y criterios, con qué frecuencia, quién y en qué meses.</p>
+      ${facil(`<p>El <b>Plan Anual</b> es un documento de trabajo, <b>aprobado por la Dirección y comunicado</b> a los implicados, que ordena todas las auditorías de un año. Sin él, se audita lo que ha salido en el último incidente y no lo que más riesgo tiene.</p>
+        <p>Se construye en cinco pasos: <b>qué</b> se audita (los hallazgos clave del Mapa de Riesgos), <b>alcance y criterios</b>, <b>frecuencia, responsables y recursos</b>, <b>cronograma</b> y <b>roles y aprobación</b>. Al final, la app genera el documento en Word y en PDF.</p>
+        <p>Cada auditoría del plan tendrá después su <b>plan específico</b>: la auditoría concreta, con sus criterios, indicadores y muestra.</p>`)}
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/plan/nuevo">+ Nuevo plan anual</a><a class="btn" href="#/plan/ej-plan-urg">Ver un ejemplo</a></div>
+      ${lista.length ? `<div class="cuadro-lista">${lista.map(tarjetaPlan).join("")}</div>`
+        : `<div class="placeholder-box"><p><b>Todavía no tienes ningún plan.</b></p><p>Lo más cómodo es crearlo desde un Mapa de Riesgos con hallazgos clave: la app trae los hallazgos agrupados por subproceso y propone la frecuencia según su IPR.</p></div>`}`;
+  }
+  function tarjetaPlan(p) {
+    const g = L.progresoPlan(p), hechos = [1, 2, 3, 4, 5].filter(k => g[k]).length;
+    return `<div class="item-card">
+      <a class="item-main" href="#/plan/${p.id}/1">
+        <b class="item-t">Plan Anual ${esc(p.anio) || '<span class="vacio">sin año</span>'}</b>
+        <span class="item-s">${esc(L.sinArticulo(p.ambito)) || "&nbsp;"}</span>
+        <span class="badges"><span class="badge">${plural(p.entradas.length, "auditoría", "auditorías")}</span><span class="badge badge--prog">Pasos ${hechos}/5</span></span>
+        ${miniCarga(p)}
+      </a>
+      <div class="item-pie"><span>Modificado: ${fechaCorta(p.modificado)}</span><span><button class="link-btn" data-act="plan-dup" data-id="${p.id}">Duplicar</button> · <button class="link-btn link-btn--peligro" data-act="plan-del" data-id="${p.id}">Borrar</button></span></div>
+    </div>`;
+  }
+  function miniCarga(p) {
+    const c = L.cargaMensual(p).n, cap = L.capacidadDe(p), max = Math.max(cap, ...c, 1), bloq = new Set(p.bloqueados);
+    return `<span class="mini-carga" aria-label="Auditorías por mes">${c.map((n, i) => `<span class="mc${n > cap ? " mc--alta" : ""}${bloq.has(i + 1) ? " mc--bloq" : ""}" title="${L.MESES_LARGO[i]}: ${n}"><i style="height:${Math.round(n / max * 100)}%"></i><b>${L.MESES[i][0]}</b></span>`).join("")}</span>`;
+  }
+
+  // ---------- Plan Anual: asistente ----------
+  let actualPlan = null, pasoPlan = 1, modoImport = "sub";
+  const PASOS_PLAN = [
+    { n: 1, corto: "Qué", titulo: "Qué se audita este año" },
+    { n: 2, corto: "Alcance", titulo: "Alcance y criterios" },
+    { n: 3, corto: "Frecuencia", titulo: "Frecuencia, responsables y recursos" },
+    { n: 4, corto: "Calendario", titulo: "Cronograma" },
+    { n: 5, corto: "Aprobación", titulo: "Roles, aprobación y control" },
+    { n: 6, corto: "Documento", titulo: "Documento del plan" }
+  ];
+  const esVacioPlan = p => !p.entradas.length && !["ambito", "responsable", "objetivo", "introduccion", "notas"].some(k => lleno(p[k]));
+  const buscaPlan = id => datos.planes.find(x => x.id === id);
+  const buscaEnt = id => actualPlan && actualPlan.entradas.find(e => e.id === id);
+
+  function pasosPlanHtml(p, paso) {
+    const g = L.progresoPlan(p);
+    return `<ol class="wiz-steps" aria-label="Pasos del plan">${PASOS_PLAN.map(s => `<li><a href="#/plan/${p.id}/${s.n}" class="wiz-step${s.n === paso ? " actual" : ""}${g[s.n] ? " hecho" : ""}"${s.n === paso ? ' aria-current="step"' : ""}><span class="wiz-num">${g[s.n] && s.n !== paso ? "✓" : s.n}</span><span class="wiz-lbl">${s.corto}</span></a></li>`).join("")}</ol>`;
+  }
+  const avisosPasoHtml = (p, paso) => L.avisosPlan(p, datos.mapas).filter(a => a.paso === paso).map(avisoHtml).join("");
+  // Cabecera de cada auditoría del plan dentro de los pasos 2 y 3
+  function entCab(e, i) {
+    const pr = L.prioridadEntrada(e, datos.mapas);
+    return `<div class="ent-cab"><span class="crit-n">${i + 1}</span><b>${lleno(e.titulo) ? esc(e.titulo) : '<span class="vacio">Sin nombre</span>'}</b>${pr.ipr ? iprBadge(pr.ipr) : ""}${e.tipo !== "interna" ? `<span class="badge tipo-b--${e.tipo}">${L.TIPOS_ENTRADA[e.tipo].nom}</span>` : ""}</div>`;
+  }
+  const eb = (e, f) => `data-e="${e.id}" data-f="${f}"`;
+
+  function planPaso1(p) {
+    const mapas = datos.mapas.filter(m => m.riesgos.some(r => r.clave));
+    return `
+      ${idea("No se trata de auditarlo todo cada año, sino de <b>priorizar</b>: los procesos con más riesgo (IPR alto), los que fallaron en auditorías previas y los que exige la acreditación.")}
+      ${facil(`<p>Cada fila del plan es <b>una auditoría programada</b>. Lo práctico es agrupar los hallazgos clave <b>por subproceso</b> (triaje, sala de espera, ingreso…): el calendario queda más claro y una misma visita revisa varios riesgos.</p>
+        <ul><li><b>Interna</b>: la hace la propia organización.</li><li><b>Externa</b>: acreditación, inspección o certificación (también conviene tenerla en el calendario).</li><li><b>Seguimiento</b>: comprueba si las mejoras de una auditoría anterior han funcionado.</li></ul>`)}
+      <div class="card">
+        <h2 class="sub-h">Datos del plan</h2>
+        <div class="dos-col">
+          ${campo(p, "anio", "Año", { ph: "p. ej. 2027" })}
+          ${campo(p, "ambito", "Ámbito", { ph: "p. ej. el Servicio de Urgencias", help: "Unidad, servicio, centro o área que cubre el plan. Escríbelo con artículo («el Servicio de…», «la Unidad de…»): así queda bien en el documento." })}
+        </div>
+        ${campo(p, "responsable", "Responsable del plan", { ph: "p. ej. Coordinación de Calidad y Seguridad del Paciente", help: "Quien coordina, revisa y hace el seguimiento del plan. Habitualmente, Calidad y Seguridad del Paciente o la persona designada por la Dirección." })}
+      </div>
+      ${mapas.length ? `<div class="card importar">
+        <h2 class="sub-h">Traer los hallazgos clave de un Mapa de Riesgos</h2>
+        <div class="filtros filtros--solo"><label>Mapa<select id="plan-mapa">${mapas.map(m => `<option value="${m.id}">${esc(m.nombre || "Mapa sin nombre")} · ${plural(m.riesgos.filter(r => r.clave).length, "hallazgo clave", "hallazgos clave")}</option>`).join("")}</select></label></div>
+        <div class="field"><div class="field-head"><label class="field-label">¿Cómo se agrupan?</label></div>
+          <div class="seg" role="group"><button type="button" class="${modoImport === "sub" ? "active" : ""}" data-act="modo-import" data-v="sub">Una auditoría por subproceso</button><button type="button" class="${modoImport === "hallazgo" ? "active" : ""}" data-act="modo-import" data-v="hallazgo">Una por hallazgo</button></div></div>
+        <div class="toolbar"><button class="btn btn--primary" data-act="plan-importar">Añadir al plan</button></div>
+        <p class="field-sub">La frecuencia se propone según el IPR de cada grupo. Podrás cambiarla en el paso 3.</p>
+      </div>` : `<div class="note">ℹ Si tienes un <a href="#/riesgos">Mapa de Riesgos</a> con hallazgos clave (★), podrás traerlos aquí con un clic.</div>`}
+      <h2 class="sec-t">Auditorías del plan <span class="contador">${p.entradas.length}</span></h2>
+      <div data-zona="avisos-plan">${avisosPasoHtml(p, 1)}</div>
+      ${p.entradas.map((e, i) => {
+        const m = datos.mapas.find(x => x.id === e.mapaId), rs = L.riesgosDeEntrada(e, datos.mapas);
+        const libres = m ? L.ordenarRiesgos(m.riesgos.filter(r => !e.riesgoIds.includes(r.id) && lleno(r.fallo))) : [];
+        return `<div class="crit ent">
+          <div class="crit-cab"><span class="crit-n">${i + 1}</span><b>Auditoría ${i + 1}</b><button type="button" class="link-btn link-btn--peligro no-print" data-act="ent-del" data-id="${e.id}">Quitar</button></div>
+          ${campo(e, "titulo", "Proceso o subproceso que se audita", { bind: eb(e, "titulo"), ph: "p. ej. Triaje de enfermería" })}
+          <div class="field"><div class="field-head"><label class="field-label">Tipo</label></div>
+            <div class="seg" role="group">${Object.keys(L.TIPOS_ENTRADA).map(k => `<button type="button" class="${e.tipo === k ? "active" : ""}" data-epick="${e.id}" data-f="tipo" data-v="${k}">${L.TIPOS_ENTRADA[k].nom.replace("Auditoría ", "").replace(/^./, c => c.toUpperCase())}</button>`).join("")}</div></div>
+          ${rs.length ? `<div class="field"><div class="field-head"><label class="field-label">Hallazgos del Mapa de Riesgos</label></div><div class="ent-rgs">${L.ordenarRiesgos(rs).map(r => `<span class="ent-rg">${iprBadge(L.iprDe(r))}<span>${esc(r.fallo)}</span><button type="button" class="ent-rg-x no-print" data-act="ent-quitar-rg" data-e="${e.id}" data-id="${r.id}" aria-label="Quitar este hallazgo">✕</button></span>`).join("")}</div></div>` : ""}
+          ${libres.length ? `<div class="filtros filtros--solo no-print"><label>Añadir otro hallazgo del mapa<select data-act-sel="ent-add-rg" data-e="${e.id}"><option value="">Elige…</option>${libres.map(r => `<option value="${r.id}">${r.clave ? "★ " : ""}${esc(L.corto(r.fallo, 70))}${L.iprDe(r) ? " · IPR " + L.iprDe(r) : ""}</option>`).join("")}</select></label></div>` : ""}
+          ${campo(e, "hallazgos", rs.length ? "Otros hallazgos o motivos" : "Hallazgos o motivos de esta auditoría", { bind: eb(e, "hallazgos"), area: true, opt: rs.length > 0, sub: "Uno por línea.", ph: "p. ej. Incidente notificado en Radiología\nEstándar de acreditación sobre identificación" })}
+        </div>`; }).join("") || `<p class="placeholder-box">Aún no hay auditorías en el plan.</p>`}
+      <div class="toolbar no-print"><button class="btn" data-act="ent-add">+ Añadir auditoría a mano</button></div>`;
+  }
+
+  function planPaso2(p) {
+    return `
+      ${idea("El <b>alcance</b> dice qué se audita y hasta dónde; los <b>criterios</b>, contra qué se compara. Sin criterios claros no se puede decir si algo cumple o no.")}
+      ${facil(`<p><b>Alcance</b> acotado y realista: qué registros o actividades, de qué periodo, de qué pacientes y cuántos. Mejor «20 historias de pacientes mayores de 70 años de los últimos 30 días» que «el triaje».</p>
+        <p><b>Criterios</b>: los protocolos internos, los estándares de acreditación (ACSA), normas ISO o guías. Deben ser claros, actualizados y <b>comunicados antes</b> de la auditoría. Tipos: normativos, procedimentales, contractuales y regulatorios.</p>
+        <p><b>Documentos y fuentes</b>: dónde se mirará: historia clínica, hojas de registro, sistema de información, observación…</p>`)}
+      ${ejemplo("triaje de enfermería", "<p><b>Alcance</b>: registros de triaje de los últimos 30 días; 20 historias de pacientes mayores de 70 años. <b>Criterios</b>: protocolo de triaje y estándar de acreditación sobre valoración inicial. <b>Fuentes</b>: historia clínica electrónica, hoja de triaje.</p>")}
+      <div data-zona="avisos-plan">${avisosPasoHtml(p, 2)}</div>
+      ${p.entradas.map((e, i) => `<div class="crit ent">${entCab(e, i)}
+        ${L.hallazgosDeEntrada(e, datos.mapas).length ? `<p class="ent-hall">${L.hallazgosDeEntrada(e, datos.mapas).map(h => "• " + esc(h)).join("<br>")}</p>` : ""}
+        ${campo(e, "alcance", "Alcance", { bind: eb(e, "alcance"), area: true, ph: "p. ej. Registros de triaje de los últimos 30 días; 20 historias de pacientes mayores de 70 años", help: "Qué se revisa (procesos, actividades, registros), de qué periodo, en qué pacientes y, si ya lo sabes, cuántos casos. Di también qué queda fuera." })}
+        ${campo(e, "criterios", "Criterios de referencia", { bind: eb(e, "criterios"), area: true, ph: "p. ej. Protocolo de triaje del hospital; estándar ACSA de valoración inicial", help: "Con qué se comparará la práctica real: protocolos, procedimientos, estándares de acreditación, normas o guías." })}
+        <div class="quick">${Object.keys(L.TIPOS_CRITERIO).map(k => `<button type="button" class="chip${e.tiposCriterio.includes(k) ? " active" : ""}" data-emulti="${e.id}" data-v="${k}">${L.TIPOS_CRITERIO[k]}</button>`).join("")}</div>
+        ${campo(e, "documentos", "Documentos y fuentes", { bind: eb(e, "documentos"), area: true, ph: "p. ej. Historia clínica electrónica, hoja de triaje, observación directa" })}
+      </div>`).join("") || `<p class="placeholder-box">Primero añade las auditorías del plan en el paso 1.</p>`}
+      ${trampa("Un alcance demasiado amplio («toda la gestión de la medicación») hace la auditoría inviable. Si no cabe en unas pocas horas de trabajo, divídela.")}`;
+  }
+
+  const RECURSOS_RAPIDOS = ["Checklist validado", "Acceso a historias clínicas", "Observación directa", "Guía de entrevista", "Sistema de información (HIS)", "Formación previa del equipo auditor", "Hoja de cálculo para los resultados"];
+  function planPaso3(p) {
+    return `
+      ${idea("Frecuencia <b>proporcional al riesgo</b>: lo de IPR alto y gran impacto en la seguridad, cada trimestre o, como mucho, cada semestre. Lo demás, una vez al año… o no todos los años.")}
+      ${facil(`<p>La app propone una frecuencia según el IPR más alto de cada auditoría: <b>trimestral</b> desde 250, <b>semestral</b> desde 150 y <b>anual</b> por debajo (semestral si hay un fallo de gravedad 9–10). Es orientativo: pesan también los resultados previos y los recursos.</p>
+        <p><b>Responsables</b>: personas o cargos concretos, mejor de distintos perfiles (supervisión, facultativo, calidad). Quien audita no debería auditar su propio trabajo.</p>
+        <p><b>Recursos</b>: tiempo, acceso a la información, herramientas (listas de verificación, sistema de información) y formación previa si hace falta.</p>`)}
+      <div data-zona="avisos-plan">${avisosPasoHtml(p, 3)}</div>
+      ${p.entradas.map((e, i) => { const s = L.frecuenciaSugerida(e, datos.mapas); return `<div class="crit ent">${entCab(e, i)}
+        <div class="field"><div class="field-head"><label class="field-label">Frecuencia</label>${s ? `<span class="sugerida">Sugerida: <b>${L.FRECUENCIAS[s.k].nom}</b> (${esc(s.motivo)})</span>` : ""}</div>
+          <div class="seg seg--wrap" role="group">${Object.keys(L.FRECUENCIAS).map(k => `<button type="button" class="${e.frecuencia === k ? "active" : ""}" data-epick="${e.id}" data-f="frecuencia" data-v="${k}">${L.FRECUENCIAS[k].nom}</button>`).join("")}</div></div>
+        ${campo(e, "responsables", "Responsables", { bind: eb(e, "responsables"), ph: "p. ej. Supervisora de Enfermería y Técnico de Calidad", help: "Quién realiza la auditoría. Cargos o nombres concretos; mejor un equipo de distintos perfiles e independiente del área si es posible." })}
+        ${campo(e, "recursos", "Recursos necesarios", { bind: eb(e, "recursos"), area: true, ph: "p. ej. Checklist de triaje, acceso a historias clínicas, formación puntual", extra: `<div class="quick">${RECURSOS_RAPIDOS.map(r => `<button type="button" class="chip" data-eadd="${e.id}" data-v="${esc(r)}">+ ${esc(r)}</button>`).join("")}</div>` })}
+        ${campo(e, "horas", "Horas de trabajo por ronda", { bind: eb(e, "horas"), opt: true, ph: "p. ej. 6", help: "Estimación del tiempo del equipo auditor cada vez que se hace (preparar, revisar casos, analizar). Sirve para ver la carga de cada mes." })}
+      </div>`; }).join("") || `<p class="placeholder-box">Primero añade las auditorías del plan en el paso 1.</p>`}`;
+  }
+
+  function cronogramaHtml(p) {
+    const bloq = new Set(p.bloqueados), car = L.cargaMensual(p), cap = L.capacidadDe(p), conHoras = car.horas.some(h => h > 0);
+    return `<div class="table-wrap crono-wrap"><table class="crono">
+      <thead><tr><th class="crono-nom">Auditoría</th>${L.MESES.map((m, i) => `<th class="${bloq.has(i + 1) ? "bloq" : ""}"><button type="button" class="crono-mes" data-act="bloq" data-m="${i + 1}" aria-pressed="${bloq.has(i + 1)}" title="${bloq.has(i + 1) ? "Quitar" : "Marcar"} ${L.MESES_LARGO[i]} como mes de alta presión">${m}</button></th>`).join("")}</tr></thead>
+      <tbody>${p.entradas.map(e => { const f = L.FRECUENCIAS[e.frecuencia], r = L.rondas(e.meses), ok = f && r === f.rondas; return `<tr>
+        <th class="crono-nom"><b>${esc(L.corto(e.titulo || "Sin nombre", 42))}</b><span class="${f ? (ok ? "ok" : "mal") : ""}">${f ? `${f.nom}: ${r}/${f.rondas} ${ok ? "✓" : ""}` : "Sin frecuencia"}</span></th>
+        ${L.MESES.map((_, i) => { const on = e.meses.includes(i + 1); return `<td class="${bloq.has(i + 1) ? "bloq" : ""}"><button type="button" class="crono-c${on ? " on tipo--" + e.tipo : ""}" data-act="mes" data-e="${e.id}" data-m="${i + 1}" aria-pressed="${on}" aria-label="${esc(e.titulo)} en ${L.MESES_LARGO[i]}">${on ? "■" : ""}</button></td>`; }).join("")}
+      </tr>`; }).join("")}</tbody>
+      <tfoot><tr><th class="crono-nom">Auditorías en el mes</th>${car.n.map(n => `<td class="${n > cap ? "alta" : ""}">${n || ""}</td>`).join("")}</tr>
+      ${conHoras ? `<tr><th class="crono-nom">Horas de trabajo</th>${car.horas.map(h => `<td>${h ? L.nfmt(h) : ""}</td>`).join("")}</tr>` : ""}</tfoot>
+    </table></div>
+    <div class="leyenda"><span><i class="tipo--interna"></i>Interna</span><span><i class="tipo--externa"></i>Externa</span><span><i class="tipo--seguimiento"></i>Seguimiento</span><span><i class="leg-bloq"></i>Mes de alta presión</span></div>`;
+  }
+  function planPaso4(p) {
+    return `
+      ${idea("Un calendario <b>escalonado</b> reparte el trabajo del equipo auditor, evita los meses de más presión asistencial y deja tiempo para mejorar y volver a medir.")}
+      ${facil(`<p>Toca una casilla para poner o quitar una auditoría en ese mes. Una <b>ronda</b> son meses seguidos (enero–febrero cuenta como una sola vez). La columna de la izquierda te dice si las rondas cuadran con la frecuencia.</p>
+        <p>Toca el nombre de un mes en la cabecera para marcarlo como <b>mes de alta presión</b> (vacaciones, campaña de gripe…): el reparto automático lo evitará.</p>
+        <p><b>Repartir automáticamente</b> coloca las auditorías de más a menos prioritaria donde menos carga hay, respetando la frecuencia y los meses de alta presión. Después puedes retocarlo a mano.</p>`)}
+      <div class="card">
+        <div class="field"><div class="field-head"><label class="field-label">¿Cuántas auditorías puede hacer el equipo a la vez en un mes?</label></div>
+          ${seg(p, "capacidad", [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]])}</div>
+        <div class="toolbar"><button class="btn btn--primary" data-act="repartir">⚙ Repartir automáticamente</button>${p.entradas.some(e => e.meses.length) ? `<button class="btn" data-act="vaciar-crono">Vaciar el calendario</button>` : ""}</div>
+      </div>
+      <div data-zona="avisos-plan">${avisosPasoHtml(p, 4)}</div>
+      ${p.entradas.length ? `<div class="card chart-card" data-zona="crono">${cronogramaHtml(p)}</div>` : `<p class="placeholder-box">Primero añade las auditorías del plan en el paso 1.</p>`}
+      ${p.entradas.length ? `<h2 class="sec-t">Observaciones para la ejecución</h2>
+        <div class="card">${p.entradas.map(e => campo(e, "observaciones", esc(e.titulo || "Sin nombre"), { bind: eb(e, "observaciones"), area: true, opt: true, ph: "p. ej. Incluir sesiones formativas antes de empezar" })).join("")}</div>` : ""}
+      ${practica("Reserva huecos para las <b>auditorías de seguimiento</b>: comprobar a los 3–6 meses si las mejoras han funcionado es lo que cierra el ciclo. Añádelas en el paso 1 con el tipo «Seguimiento».")}`;
+  }
+
+  const ROLES = [
+    ["coordinacion", "Coordinación del plan", "Coordinación de Calidad y Seguridad del Paciente: planifica, coordina y consolida los resultados."],
+    ["equipo", "Equipo auditor", "Equipo multidisciplinar formado (supervisión, facultativo, enfermería, técnico de calidad), independiente del área auditada cuando sea posible."],
+    ["revision", "Revisión de las acciones de mejora", "Supervisión y jefatura de la unidad: revisan las acciones correctoras y su eficacia en las auditorías de seguimiento."],
+    ["direccion", "Dirección", "Dirección: aprueba el plan, lo difunde y garantiza tiempo y recursos."],
+    ["auditados", "Profesionales auditados", "Conocen el plan con antelación, resuelven dudas y participan en la definición de mejoras."]
+  ];
+  function personasHtml(p, k, titulo) {
+    return `<div class="personas"><p class="personas-t">${titulo}</p>${p.control[k].map((x, i) => `<div class="persona">
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="nombre" value="${esc(x.nombre)}" placeholder="Nombre" autocomplete="off" />
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="cargo" value="${esc(x.cargo)}" placeholder="Cargo" autocomplete="off" />
+      <button type="button" class="icon-btn no-print" data-act="cp-del" data-k="${k}" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+      <button type="button" class="link-btn no-print" data-act="cp-add" data-k="${k}">+ Añadir persona</button></div>`;
+  }
+  function planPaso5(p) {
+    const ap = p.aprobacion;
+    return `
+      ${idea("Un plan que nadie ha aprobado ni comunicado se queda en papel. La Dirección lo <b>aprueba</b> y garantiza los recursos; los profesionales lo <b>conocen antes</b> de que empiecen las auditorías.")}
+      <h2 class="sec-t">Roles y responsabilidades</h2>
+      <div class="card">
+        ${ROLES.map(([k, nom, ph]) => campo(p, "roles." + k, nom, { area: true, ph: "p. ej. " + ph })).join("")}
+        <div class="quick"><button type="button" class="chip chip--accent" data-act="roles-sug">✎ Rellenar los vacíos con una propuesta</button></div>
+      </div>
+      ${trampa("Suponer que todos saben quién hace qué genera confusión y resistencias. Escríbelo, y deja claro que la auditoría es para aprender, no para fiscalizar.")}
+      <h2 class="sec-t">Aprobación y difusión</h2>
+      <div class="card">
+        <div class="dos-col">
+          <div class="field"><div class="field-head"><label class="field-label">Fecha de aprobación</label></div><div class="input-wrap"><input class="txt-in" type="date" data-k="aprobacion.fecha" value="${esc(ap.fecha)}" /></div></div>
+          <div class="field"><div class="field-head"><label class="field-label">¿Comunicado a los implicados?</label></div>
+            <div class="seg" role="group"><button type="button" class="${ap.comunicado ? "active" : ""}" data-act="comunicado" data-v="1">Sí</button><button type="button" class="${!ap.comunicado ? "active" : ""}" data-act="comunicado" data-v="0">Todavía no</button></div></div>
+        </div>
+        ${ap.comunicado ? `<div class="dos-col">
+          <div class="field"><div class="field-head"><label class="field-label">Fecha de comunicación</label></div><div class="input-wrap"><input class="txt-in" type="date" data-k="aprobacion.fechaComunicacion" value="${esc(ap.fechaComunicacion)}" /></div></div>
+          ${campo(p, "aprobacion.via", "Cómo se comunicó", { opt: true, ph: "p. ej. sesión de servicio y correo" })}</div>` : ""}
+      </div>
+      <h2 class="sec-t">Control del documento</h2>
+      <p class="page-lead">Quién elabora, revisa y aprueba el plan, y el historial de cambios. Saldrá en la primera página del documento.</p>
+      <div class="card">
+        ${personasHtml(p, "elaborado", "Elaborado por")}
+        ${personasHtml(p, "revisado", "Revisado por")}
+        ${personasHtml(p, "aprobado", "Aprobado por")}
+        <div class="personas"><p class="personas-t">Histórico de revisiones</p>${p.control.historial.map((h, i) => `<div class="persona persona--hist">
+          <input class="txt-in" data-ch="${i}" data-f="edicion" value="${esc(h.edicion)}" placeholder="Ed." autocomplete="off" />
+          <input class="txt-in" type="date" data-ch="${i}" data-f="fecha" value="${esc(h.fecha)}" />
+          <input class="txt-in" data-ch="${i}" data-f="cambio" value="${esc(h.cambio)}" placeholder="Qué cambia" autocomplete="off" />
+          <button type="button" class="icon-btn no-print" data-act="ch-del" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+          <button type="button" class="link-btn no-print" data-act="ch-add">+ Nueva edición</button></div>
+      </div>
+      <h2 class="sec-t">Notas</h2>
+      <div class="card">
+        ${campo(p, "objetivo", "Objetivo del plan", { area: true, opt: true, ph: "Si lo dejas vacío, el documento usará un objetivo general." })}
+        ${campo(p, "introduccion", "Introducción", { area: true, opt: true, rows: 3, ph: "Si la dejas vacía, el documento la redacta con los datos del plan." })}
+        ${campo(p, "notas", "Notas", { area: true, opt: true })}
+      </div>
+      ${box("idea", "Barreras y facilitadores", "<p><b>Barreras</b>: falta de tiempo, resistencia al cambio, percepción punitiva. <b>Facilitadores</b>: compromiso directivo, recursos, formación e implicación de los mandos intermedios.</p>")}`;
+  }
+
+  function planPaso6(p) {
+    const doc = L.documentoPlan(p, datos.mapas, new Date().toLocaleDateString("es-ES"));
+    return `
+      <div class="toolbar no-print">
+        <button class="btn btn--primary" data-act="plan-word">⬇ Descargar Word</button>
+        <button class="btn" data-act="informe">Ver para imprimir / PDF</button>
+        <button class="btn" data-act="plan-excel">Exportar a Excel</button>
+      </div>
+      ${practica("El Word es <b>editable</b>: pásalo a la plantilla de tu centro, añade logotipos o cambia lo que necesites.")}
+      ${p.entradas.length && !modoEjemplo ? `<h2 class="sec-t">Las auditorías del plan</h2>
+        <p class="page-lead">Cada auditoría programada se convierte en una auditoría concreta cuando llega su momento: trae su alcance y sus hallazgos.</p>
+        <div class="card ent-auds">${p.entradas.map(e => { const a = e.auditoriaId && datos.auditorias.find(x => x.id === e.auditoriaId); return `<div class="ent-aud"><span><b>${esc(e.titulo || "Sin nombre")}</b><span>${esc(L.textoMeses(e.meses)) || "Sin meses"}</span></span>${a ? `<a class="btn" href="#/auditoria/${a.id}">Abrir auditoría</a>` : `<button class="btn btn--primary" data-act="crear-aud" data-e="${e.id}">Crear auditoría</button>`}</div>`; }).join("")}</div>` : ""}
+      <h2 class="sec-t">Vista previa</h2>
+      <div class="doc-prev">${bloquesHtml(doc.bloques)}</div>`;
+  }
+
+  const RENDER_PLAN = { 1: planPaso1, 2: planPaso2, 3: planPaso3, 4: planPaso4, 5: planPaso5, 6: planPaso6 };
+  function resumenPlan(p) {
+    const g = L.progresoPlan(p), A = L.avisosPlan(p, datos.mapas), w = A.filter(a => a.nivel !== "nota").length;
+    return `<div class="resumen">
+      <div class="res-label">Así va tu plan</div>
+      <h3 class="resumen-nombre">Plan Anual ${esc(p.anio) || "…"}</h3>
+      <p class="res-sub">${esc(L.sinArticulo(p.ambito)) || "Sin ámbito todavía"}</p>
+      <div class="badges"><span class="badge">${plural(p.entradas.length, "auditoría", "auditorías")}</span>${w ? `<span class="badge badge--aviso">⚠ ${plural(w, "aviso", "avisos")}</span>` : ""}</div>
+      ${miniCarga(p)}
+      <ul class="check-lista">${PASOS_PLAN.slice(0, 5).map(s => `<li class="${g[s.n] ? "ok" : ""}">${g[s.n] ? "✓" : "○"} ${s.titulo}</li>`).join("")}</ul>
+    </div>`;
+  }
+  function renderPlan(p, paso) {
+    actualPlan = p; pasoPlan = paso; actualMapa = null; actualAud = null; nAyuda = 0;
+    if (document.body.classList.contains("ver-informe")) {
+      const doc = L.documentoPlan(p, datos.mapas, new Date().toLocaleDateString("es-ES"));
+      view.innerHTML = `${informeBar()}<div class="doc-prev doc-prev--informe">${bloquesHtml(doc.bloques)}</div>${informePie()}`;
+      return;
+    }
+    const s = PASOS_PLAN[paso - 1];
+    view.innerHTML = `
+      <div class="wiz-top no-print">${volver(modoEjemplo ? "#/ejemplos" : "#/plan", modoEjemplo ? "Ejemplos" : "Mis planes")}${lineaPDCA("plan")}</div>
+      <div class="wiz-top no-print">${pasosPlanHtml(p, paso)}</div>
+      <div class="wiz-grid${paso === 6 ? " wiz-grid--ficha" : ""}">
+        <div class="wiz-main">
+          <div class="wiz-titulo"><span class="wiz-paso">Plan anual · paso ${paso} de 6 · Planificar</span><h1 class="page-title">${s.titulo}</h1></div>
+          ${RENDER_PLAN[paso](p)}
+          <div class="wiz-nav no-print">
+            ${paso > 1 ? `<a class="btn" href="#/plan/${p.id}/${paso - 1}">← Anterior</a>` : "<span></span>"}
+            ${paso < 6 ? `<a class="btn btn--primary" href="#/plan/${p.id}/${paso + 1}">Siguiente: ${PASOS_PLAN[paso].corto} →</a>` : modoEjemplo ? "<span></span>" : `<button class="btn btn--peligro-ghost" data-act="plan-del" data-id="${p.id}">Borrar plan</button>`}
+          </div>
+        </div>
+        ${paso < 6 ? `<aside class="wiz-side no-print" data-zona="resumen-plan">${resumenPlan(p)}</aside>` : ""}
+      </div>`;
+  }
+  function refrescarPlan() {
+    const p = actualPlan; if (!p) return;
+    const z = $("[data-zona='resumen-plan']"); if (z) z.innerHTML = resumenPlan(p);
+    const av = $("[data-zona='avisos-plan']"); if (av) av.innerHTML = avisosPasoHtml(p, pasoPlan);
+    const cr = $("[data-zona='crono']"); if (cr) cr.innerHTML = cronogramaHtml(p);
+    const st = $(".wiz-steps"); if (st) st.outerHTML = pasosPlanHtml(p, pasoPlan);
+  }
+  function repintarPlan() { const y = window.scrollY; renderPlan(actualPlan, pasoPlan); window.scrollTo(0, y); }
+
+  // Una auditoría programada del plan se convierte en auditoría concreta (con su alcance y sus hallazgos)
+  function crearAudDesdeEntrada(p, e) {
+    const a = L.nuevaAuditoria(genId(), hoy()), m = datos.mapas.find(x => x.id === e.mapaId);
+    a.titulo = `Auditoría ${e.tipo === "externa" ? "externa" : e.tipo === "seguimiento" ? "de seguimiento" : "interna"} · ${e.titulo}`;
+    a.tipo = e.tipo === "externa" ? "externa" : "interna";
+    a.unidad = L.sinArticulo(p.ambito);
+    a.alcance = e.alcance; a.planId = p.id; a.entradaId = e.id;
+    if (e.tipo === "seguimiento") a.origen.tipo = "seguimiento";
+    else if (m) a.origen.tipo = "riesgos";
+    if (m) { a.origen.mapaId = m.id; a.origen.riesgoIds = e.riesgoIds.slice(); a.criterios = L.criteriosDesdeRiesgos(m, e.riesgoIds, genId); }
+    String(e.hallazgos || "").split("\n").map(x => x.trim()).filter(Boolean).forEach(h => a.criterios.push(Object.assign(L.nuevoCriterio(genId()), { subproceso: e.titulo, hallazgo: h })));
+    a.origen.detalle = `Programada en el Plan Anual ${p.anio || ""}${lleno(e.criterios) ? ". Criterios de referencia: " + e.criterios : ""}`.trim();
+    if (m && !lleno(a.proceso) && lleno(m.proceso)) a.proceso = m.proceso.charAt(0).toLowerCase() + m.proceso.slice(1);
+    datos.auditorias.push(a); e.auditoriaId = a.id; p.modificado = hoy(); guardar(true);
+    location.hash = "#/auditoria/" + a.id;
+    toast("Auditoría creada con el alcance y los hallazgos del plan.", 4000);
+  }
+
   // ---------- Ejemplos ----------
   function renderEjemplos() {
     view.innerHTML = `
       <h1 class="page-title">Ejemplos</h1>
       <p class="page-lead">Para ver cómo queda cada paso antes de hacerlo tú. Están aparte: puedes tocarlos, pero <b>no se guardan ni se mezclan con tus datos</b>. Si uno te sirve de punto de partida, pulsa «Copiar a mis datos».</p>
       <h2 class="sec-t">Ejemplo completo: admisión en Urgencias</h2>
-      <p class="field-sub">Una auditoría clínica interna del proceso de admisión en Urgencias, desde que el paciente llega hasta la decisión de ingreso. Parte de un AMFE con 15 riesgos priorizados, elige 10 hallazgos clave y define un criterio para cada uno en 7 subprocesos. Irá creciendo con cada versión de la app hasta llegar al informe y al plan de mejora.</p>
-      <div class="ej-grid">${C.EJEMPLOS.fichas.slice(0, 2).map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
+      <p class="field-sub">Una auditoría clínica interna del proceso de admisión en Urgencias, desde que el paciente llega hasta la decisión de ingreso. Parte de un AMFE con 15 riesgos priorizados, los lleva a un Plan Anual con siete auditorías por subproceso y define la auditoría del proceso completo con 10 criterios. Irá creciendo con cada versión de la app hasta llegar al informe y al plan de mejora.</p>
+      <div class="ej-grid">${C.EJEMPLOS.fichas.slice(0, 3).map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
       <h2 class="sec-t">Minicasos</h2>
-      <div class="ej-grid">${C.EJEMPLOS.fichas.slice(2).map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
+      <div class="ej-grid">${C.EJEMPLOS.fichas.slice(3).map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
       ${practica("Las cifras de los ejemplos son ilustrativas. Adapta siempre los criterios y las puntuaciones a tu unidad.")}`;
   }
 
@@ -746,7 +1092,7 @@
   const rutaActual = () => location.hash.split("?")[0];
   const fechaArchivo = () => new Date().toLocaleDateString("es-ES").replace(/\//g, "-");
   function nombreArchivo(ext) {
-    const base = actualMapa ? "Mapa de Riesgos " + (actualMapa.nombre || "").slice(0, 50) : actualAud ? "Auditoría " + (actualAud.titulo || "").slice(0, 50) : "Auditorías";
+    const base = actualMapa ? "Mapa de Riesgos " + (actualMapa.nombre || "").slice(0, 50) : actualAud ? (actualAud.titulo || "Auditoría").slice(0, 60) : actualPlan ? "Plan Anual de Auditorías " + (actualPlan.anio || "") : "Auditorías";
     return `${base.replace(/[\\/:*?"<>|%]/g, "").trim()} ${fechaArchivo()}.${ext}`;
   }
   function prepararPDF() {
@@ -769,7 +1115,7 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
   }
-  function irInforme() { location.hash = rutaActual() + "?informe=1"; }
+  function irInforme() { location.hash = (actualPlan ? `#/plan/${actualPlan.id}/6` : rutaActual()) + "?informe=1"; }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
     if (!document.body.classList.contains("ver-informe")) { irInforme(); setTimeout(() => window.print(), 400); return; }
@@ -783,7 +1129,7 @@
 
   // ---------- Copia de seguridad, importar y Excel ----------
   async function copiaSeguridad() {
-    const contenido = JSON.stringify({ app: "auditorias", v: L.VERSION_DATOS, exportado: hoy(), mapas: datosUsuario.mapas, auditorias: datosUsuario.auditorias }, null, 1);
+    const contenido = JSON.stringify({ app: "auditorias", v: L.VERSION_DATOS, exportado: hoy(), mapas: datosUsuario.mapas, auditorias: datosUsuario.auditorias, planes: datosUsuario.planes }, null, 1);
     const nombre = `Auditorías copia ${new Date().toISOString().slice(0, 10)}.json`;
     const blob = new Blob([contenido], { type: "application/json" });
     const file = new File([blob], nombre, { type: "application/json" });
@@ -800,17 +1146,17 @@
       let s = null; try { s = L.sanearDatos(JSON.parse(fr.result), genId, hoy()); } catch (e) { /* */ }
       if (!s) { toast("Ese archivo no es una copia de Auditorías.", 4000); return; }
       // Nunca se importa nada con id de ejemplo
-      [...s.mapas, ...s.auditorias].forEach(x => { if (esIdEjemplo(x.id)) x.id = genId(); });
-      const hay = datosUsuario.mapas.length + datosUsuario.auditorias.length;
-      const resumen = `<b>${plural(s.mapas.length, "mapa de riesgos", "mapas de riesgos")}</b> y <b>${plural(s.auditorias.length, "auditoría", "auditorías")}</b>`;
+      [...s.mapas, ...s.auditorias, ...s.planes].forEach(x => { if (esIdEjemplo(x.id)) x.id = genId(); });
+      const hay = datosUsuario.mapas.length + datosUsuario.auditorias.length + datosUsuario.planes.length;
+      const resumen = `<b>${plural(s.mapas.length, "mapa de riesgos", "mapas de riesgos")}</b>, <b>${plural(s.planes.length, "plan anual", "planes anuales")}</b> y <b>${plural(s.auditorias.length, "auditoría", "auditorías")}</b>`;
       const aplicar = modo => {
         const r = modo === "sustituir" ? s : L.fusionar(datosUsuario, s);
-        datosUsuario.mapas = r.mapas; datosUsuario.auditorias = r.auditorias; guardar(true);
-        toast(`Importados ${s.mapas.length} mapas y ${s.auditorias.length} auditorías.`, 4000);
+        datosUsuario.mapas = r.mapas; datosUsuario.auditorias = r.auditorias; datosUsuario.planes = r.planes; guardar(true);
+        toast(`Importados ${s.mapas.length} mapas, ${s.planes.length} planes y ${s.auditorias.length} auditorías.`, 4000);
         location.hash = "#/"; route();
       };
       if (!hay) { aplicar("sustituir"); return; }
-      confirmar(`<p>La copia tiene ${resumen}.</p><p><b>Añadir</b> los junta con los tuyos (si uno está en los dos, se queda el más reciente): así se trabaja en equipo. Si prefieres <b>sustituir</b> todo lo tuyo por la copia, pulsa «Sustituir».</p>`, "Añadir a mis datos", () => aplicar("anadir"), { titulo: "Importar copia", peligro: false, otro: ["Sustituir", () => confirmar("<p>Se borrarán tus mapas y auditorías actuales y se quedará solo lo de la copia. Esto no se puede deshacer.</p>", "Sustituir", () => aplicar("sustituir"))] });
+      confirmar(`<p>La copia tiene ${resumen}.</p><p><b>Añadir</b> los junta con los tuyos (si uno está en los dos, se queda el más reciente): así se trabaja en equipo. Si prefieres <b>sustituir</b> todo lo tuyo por la copia, pulsa «Sustituir».</p>`, "Añadir a mis datos", () => aplicar("anadir"), { titulo: "Importar copia", peligro: false, otro: ["Sustituir", () => confirmar("<p>Se borrarán tus mapas, planes y auditorías actuales y se quedará solo lo de la copia. Esto no se puede deshacer.</p>", "Sustituir", () => aplicar("sustituir"))] });
     };
     fr.readAsText(file);
   }
@@ -842,6 +1188,12 @@
     if (actualMapa && esIdEjemplo(actualMapa.id)) {
       const c = copiaMapa(actualMapa); guardar(true); location.hash = "#/riesgos/" + c.id;
       toast("Copiado a tus mapas. Ya es tuyo: cámbialo a tu gusto.", 4000);
+    } else if (actualPlan && esIdEjemplo(actualPlan.id)) {
+      const p = Object.assign(clon(actualPlan), { id: genId(), creado: hoy(), modificado: hoy() });
+      const nuevos = {};
+      p.entradas.forEach(x => { x.auditoriaId = ""; const m = ej.mapas.find(y => y.id === x.mapaId); if (m) x.mapaId = nuevos[m.id] || (nuevos[m.id] = copiaMapa(m).id); });
+      datosUsuario.planes.push(p); guardar(true); location.hash = `#/plan/${p.id}/1`;
+      toast("Plan copiado a tus datos (con su Mapa de Riesgos).", 4000);
     } else if (actualAud && esIdEjemplo(actualAud.id)) {
       const a = Object.assign(clon(actualAud), { id: genId(), creado: hoy(), modificado: hoy() });
       const m = ej.mapas.find(x => x.id === a.origen.mapaId);
@@ -852,7 +1204,7 @@
   }
 
   // ---------- Enrutado ----------
-  const NAV = [["", "Inicio"], ["riesgos", "Mapa de Riesgos"], ["auditorias", "Auditorías"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
+  const NAV = [["", "Inicio"], ["riesgos", "Mapa de Riesgos"], ["plan", "Plan anual"], ["auditorias", "Auditorías"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
   function buildNav() { $("#calc-nav").innerHTML = NAV.map(([r, t]) => `<a href="#/${r}" data-r="${r}">${t}</a>`).join(""); }
   function noEncontrado(que, href, txt) { view.innerHTML = `<div class="error-box">No se encuentra ${que} en este dispositivo.</div><p><a href="${href}">${txt}</a></p>`; }
   function route() {
@@ -860,10 +1212,10 @@
     const partes = ruta.split("/"), q = new URLSearchParams(qs || "");
     const informe = q.get("informe") === "1";
     document.body.classList.toggle("ver-informe", informe);
-    actualMapa = null; actualAud = null;
+    actualMapa = null; actualAud = null; actualPlan = null;
     const idR = partes[1] || "";
     const ej = ejemplos();
-    modoEjemplo = partes[0] === "ejemplos" || (esIdEjemplo(idR) && (ej.mapas.some(x => x.id === idR) || ej.auditorias.some(x => x.id === idR)));
+    modoEjemplo = partes[0] === "ejemplos" || (esIdEjemplo(idR) && [...ej.mapas, ...ej.auditorias, ...ej.planes].some(x => x.id === idR));
     datos = modoEjemplo ? ej : datosUsuario;
     const banner = $("#banner-ejemplo");
     banner.hidden = !modoEjemplo || informe || partes[0] === "ejemplos";
@@ -876,6 +1228,17 @@
       if (m) { if (!actualMapaPrevio || actualMapaPrevio !== m.id) { abiertos.clear(); pegarAbierto = false; filtroSub = ""; } actualMapaPrevio = m.id; renderMapa(m); }
       else noEncontrado("ese Mapa de Riesgos", "#/riesgos", "Ir a mis mapas");
     } else if (partes[0] === "riesgos") renderMapas();
+    else if (partes[0] === "plan" && partes[1] === "nuevo") {
+      const p = L.nuevoPlan(genId(), hoy()); p.anio = String(new Date().getFullYear() + (new Date().getMonth() >= 9 ? 1 : 0));
+      const m = buscaMapa(q.get("mapa") || "");
+      if (m) { p.ambito = m.unidad || ""; p.entradas = L.entradasDesdeMapa(m, "sub", genId); datos.planes.push(p); guardar(); }
+      else borradores.set(p.id, p);
+      history.replaceState(null, "", `#/plan/${p.id}/1`); renderPlan(p, 1);
+    } else if (partes[0] === "plan" && partes[1]) {
+      const p = buscaPlan(partes[1]) || borradores.get(partes[1]);
+      if (p) renderPlan(p, informe ? 6 : Math.min(6, Math.max(1, parseInt(partes[2], 10) || 1)));
+      else noEncontrado("ese plan", "#/plan", "Ir a mis planes");
+    } else if (partes[0] === "plan") renderPlanes();
     else if (partes[0] === "auditoria" && partes[1] === "nueva") {
       const a = L.nuevaAuditoria(genId(), hoy());
       const m = buscaMapa(q.get("mapa") || "");
@@ -909,6 +1272,7 @@
     obj.modificado = hoy();
     if (obj === actualMapa && !esVacioMapa(obj) && !datos.mapas.includes(obj)) { datos.mapas.push(obj); borradores.delete(obj.id); }
     if (obj === actualAud && !esVacioAud(obj) && !datos.auditorias.includes(obj)) { datos.auditorias.push(obj); borradores.delete(obj.id); }
+    if (obj === actualPlan && !esVacioPlan(obj) && !datos.planes.includes(obj)) { datos.planes.push(obj); borradores.delete(obj.id); }
     guardar();
   }
   const buscaRiesgo = id => actualMapa && actualMapa.riesgos.find(r => r.id === id);
@@ -934,15 +1298,32 @@
       const c = buscaCrit(t.dataset.c); if (!c) return;
       c[t.dataset.f] = t.value; tocado(actualAud); refrescarAud(); return;
     }
+    if (t.dataset.e) {
+      const e = buscaEnt(t.dataset.e); if (!e) return;
+      e[t.dataset.f] = t.value; tocado(actualPlan); refrescarPlan(); return;
+    }
+    if (t.dataset.cp && actualPlan) {
+      const x = actualPlan.control[t.dataset.cp][Number(t.dataset.i)]; if (!x) return;
+      x[t.dataset.f] = t.value; tocado(actualPlan); refrescarPlan(); return;
+    }
+    if (t.dataset.ch && actualPlan) {
+      const x = actualPlan.control.historial[Number(t.dataset.ch)]; if (!x) return;
+      x[t.dataset.f] = t.value; tocado(actualPlan); return;
+    }
     if (t.dataset.k) {
-      const obj = actualMapa || actualAud; if (!obj) return;
+      const obj = actualMapa || actualAud || actualPlan; if (!obj) return;
       setPath(obj, t.dataset.k, t.value); tocado(obj);
-      if (actualMapa) refrescarMapa(); else refrescarAud();
+      if (actualMapa) refrescarMapa(); else if (actualAud) refrescarAud(); else refrescarPlan();
     }
   });
   view.addEventListener("change", e => {
     const f = e.target.closest("[data-filtro]");
     if (f) { if (f.dataset.filtro === "sub") filtroSub = f.value; else ordenMapa = f.value; repintarMapa(); return; }
+    const se = e.target.closest("[data-act-sel='ent-add-rg']");
+    if (se && actualPlan && se.value) {
+      const en = buscaEnt(se.dataset.e); if (!en) return;
+      en.riesgoIds.push(se.value); tocado(actualPlan); repintarPlan(); return;
+    }
     const s = e.target.closest("[data-act-sel='aud-mapa']");
     if (s && actualAud) {
       const a = actualAud, m = buscaMapa(s.value);
@@ -964,10 +1345,26 @@
     const t = e.target; let b;
     if ((b = t.closest(".info-btn"))) { const h = $("#help-" + b.dataset.info); if (!h) return; const open = h.hidden; h.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
     if ((b = t.closest("[data-pick]"))) {
-      const obj = actualAud || actualMapa; if (!obj) return;
+      const obj = actualAud || actualMapa || actualPlan; if (!obj) return;
       setPath(obj, b.dataset.pick, b.dataset.v); tocado(obj);
-      if (actualAud) repintarAud(); else repintarMapa();
+      if (actualAud) repintarAud(); else if (actualMapa) repintarMapa(); else repintarPlan();
       return;
+    }
+    if ((b = t.closest("[data-epick]"))) {
+      const en = buscaEnt(b.dataset.epick); if (!en) return;
+      en[b.dataset.f] = b.dataset.v; tocado(actualPlan); repintarPlan(); return;
+    }
+    if ((b = t.closest("[data-emulti]"))) {
+      const en = buscaEnt(b.dataset.emulti); if (!en) return;
+      const i = en.tiposCriterio.indexOf(b.dataset.v); if (i < 0) en.tiposCriterio.push(b.dataset.v); else en.tiposCriterio.splice(i, 1);
+      b.classList.toggle("active", i < 0); tocado(actualPlan); return;
+    }
+    if ((b = t.closest("[data-eadd]"))) {
+      const en = buscaEnt(b.dataset.eadd); if (!en) return;
+      const ya = en.recursos.split(/[,;\n]/).map(x => L.sinTildes(x)); if (ya.includes(L.sinTildes(b.dataset.v))) return;
+      en.recursos = (lleno(en.recursos) ? en.recursos.trim().replace(/[.,;]$/, "") + ", " : "") + b.dataset.v;
+      const ta = $(`[data-e="${en.id}"][data-f="recursos"]`); if (ta) { ta.value = en.recursos; autoAlto(ta); }
+      tocado(actualPlan); return;
     }
     if (!(b = t.closest("[data-act]"))) return;
     const a = b.dataset.act, id = b.dataset.id, m = actualMapa, au = actualAud;
@@ -1068,6 +1465,88 @@
       confirmar(`<p>Se borrará la auditoría «${esc(x.titulo || "sin título")}». No se puede deshacer (salvo que tengas una copia de seguridad).</p>`, "Borrar", () => {
         datos.auditorias = datos.auditorias.filter(y => y.id !== x.id); guardar(true); renderAuditorias(); toast("Auditoría borrada.", 2500);
       }, { titulo: "Borrar auditoría" });
+    }
+    // --- Plan Anual ---
+    else if (a === "modo-import") { modoImport = b.dataset.v; repintarPlan(); }
+    else if (a === "plan-importar" && actualPlan) {
+      const mp = buscaMapa($("#plan-mapa").value); if (!mp) return;
+      const nuevas = L.entradasDesdeMapa(mp, modoImport, genId);
+      const ya = new Set(actualPlan.entradas.flatMap(x => x.riesgoIds));
+      const utiles = nuevas.map(x => Object.assign(x, { riesgoIds: x.riesgoIds.filter(id => !ya.has(id)) })).filter(x => x.riesgoIds.length);
+      if (!utiles.length) { toast("Esos hallazgos ya están en el plan.", 3000); return; }
+      actualPlan.entradas.push(...utiles);
+      if (!lleno(actualPlan.ambito) && lleno(mp.unidad)) actualPlan.ambito = mp.unidad;
+      tocado(actualPlan); repintarPlan(); toast(`Añadidas ${plural(utiles.length, "auditoría", "auditorías")} al plan.`, 3000);
+    }
+    else if (a === "ent-add" && actualPlan) {
+      const en = L.nuevaEntrada(genId()); actualPlan.entradas.push(en); tocado(actualPlan); repintarPlan();
+      const f = $(`[data-e="${en.id}"][data-f="titulo"]`); if (f) { f.scrollIntoView({ block: "center" }); f.focus(); }
+    }
+    else if (a === "ent-del" && actualPlan) {
+      const en = buscaEnt(id); if (!en) return;
+      confirmar(`<p>Se quitará «${esc(en.titulo || "auditoría sin nombre")}» del plan, con su alcance, frecuencia y meses.</p>`, "Quitar", () => { actualPlan.entradas = actualPlan.entradas.filter(x => x.id !== id); tocado(actualPlan); repintarPlan(); }, { titulo: "Quitar del plan" });
+    }
+    else if (a === "ent-quitar-rg" && actualPlan) {
+      const en = buscaEnt(b.dataset.e); if (!en) return;
+      en.riesgoIds = en.riesgoIds.filter(x => x !== id); tocado(actualPlan); repintarPlan();
+    }
+    else if (a === "mes" && actualPlan) {
+      const en = buscaEnt(b.dataset.e), mm = Number(b.dataset.m); if (!en) return;
+      const i = en.meses.indexOf(mm); if (i < 0) en.meses.push(mm); else en.meses.splice(i, 1);
+      en.meses.sort((x, y) => x - y); tocado(actualPlan); refrescarPlan();
+    }
+    else if (a === "bloq" && actualPlan) {
+      const mm = Number(b.dataset.m), i = actualPlan.bloqueados.indexOf(mm);
+      if (i < 0) actualPlan.bloqueados.push(mm); else actualPlan.bloqueados.splice(i, 1);
+      actualPlan.bloqueados.sort((x, y) => x - y); tocado(actualPlan); refrescarPlan();
+    }
+    else if (a === "repartir" && actualPlan) {
+      const P = actualPlan, hacer = todas => { const r = L.repartir(P, datos.mapas, todas); P.entradas.forEach(x => { if (r[x.id]) x.meses = r[x.id]; }); tocado(P); repintarPlan(); toast("Calendario repartido. Retócalo a mano si lo necesitas.", 3500); };
+      if (P.entradas.some(x => !lleno(x.frecuencia))) toast("Las auditorías sin frecuencia se reparten como anuales.", 3500);
+      const conMeses = P.entradas.filter(x => x.meses.length).length;
+      if (!conMeses) hacer(true);
+      else if (conMeses === P.entradas.length) confirmar("<p>Todas las auditorías tienen ya meses. ¿Rehacer el calendario completo?</p>", "Rehacer todo", () => hacer(true), { peligro: false, titulo: "Repartir automáticamente" });
+      else confirmar(`<p>${plural(conMeses, "auditoría tiene", "auditorías tienen")} ya meses. Puedes repartir solo las que faltan (respetando las que ya están) o rehacer todo el calendario.</p>`, "Solo las que faltan", () => hacer(false), { peligro: false, titulo: "Repartir automáticamente", otro: ["Rehacer todo", () => hacer(true)] });
+    }
+    else if (a === "vaciar-crono" && actualPlan) confirmar("<p>Se quitarán todos los meses del calendario (se conservan las auditorías y sus datos).</p>", "Vaciar", () => { actualPlan.entradas.forEach(x => { x.meses = []; }); tocado(actualPlan); repintarPlan(); }, { titulo: "Vaciar el calendario" });
+    else if (a === "cp-add" && actualPlan) { actualPlan.control[b.dataset.k].push(L.nuevaPersona()); tocado(actualPlan); repintarPlan(); }
+    else if (a === "cp-del" && actualPlan) { actualPlan.control[b.dataset.k].splice(Number(b.dataset.i), 1); tocado(actualPlan); repintarPlan(); }
+    else if (a === "ch-add" && actualPlan) {
+      const h = actualPlan.control.historial, ult = h[h.length - 1], n = ult ? parseInt(ult.edicion, 10) : -1;
+      h.push({ edicion: String(Number.isFinite(n) ? n + 1 : h.length).padStart(2, "0"), fecha: new Date().toISOString().slice(0, 10), cambio: "" }); tocado(actualPlan); repintarPlan();
+    }
+    else if (a === "ch-del" && actualPlan) { actualPlan.control.historial.splice(Number(b.dataset.i), 1); tocado(actualPlan); repintarPlan(); }
+    else if (a === "roles-sug" && actualPlan) {
+      let n = 0; ROLES.forEach(([k, , ph]) => { if (!lleno(actualPlan.roles[k])) { actualPlan.roles[k] = k === "coordinacion" && lleno(actualPlan.responsable) ? actualPlan.responsable + ": planifica, coordina y consolida los resultados." : ph; n++; } });
+      tocado(actualPlan); repintarPlan(); toast(n ? "Propuesta añadida en los roles vacíos. Ajústala a tu unidad." : "Todos los roles tienen ya texto.", 3000);
+    }
+    else if (a === "comunicado" && actualPlan) { actualPlan.aprobacion.comunicado = b.dataset.v === "1"; tocado(actualPlan); repintarPlan(); }
+    else if (a === "plan-word" && actualPlan) descargarWord(L.documentoPlan(actualPlan, datos.mapas, new Date().toLocaleDateString("es-ES")), nombreArchivo("docx"));
+    else if (a === "plan-excel" && actualPlan) {
+      try { const bytes = window.Xlsx.construirLibroXlsx(L.hojasExcelPlan(actualPlan, datos.mapas, new Date().toLocaleDateString("es-ES"))); compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nombreArchivo("xlsx"), "Excel descargado."); }
+      catch (e2) { toast("No se ha podido crear el Excel.", 4000); }
+    }
+    else if (a === "crear-aud" && actualPlan) { const en = buscaEnt(b.dataset.e); if (en) crearAudDesdeEntrada(actualPlan, en); }
+    else if (a === "plan-dup") {
+      const orig = buscaPlan(id); if (!orig) return;
+      const c = Object.assign(clon(orig), { id: genId(), creado: hoy(), modificado: hoy(), anio: orig.anio ? String(Number(orig.anio) + 1 || orig.anio) : "" });
+      c.entradas.forEach(x => { x.id = genId(); x.auditoriaId = ""; });
+      c.control = L.nuevoControl(); c.aprobacion = L.nuevoPlan("", "").aprobacion;
+      datos.planes.push(c); guardar(); location.hash = `#/plan/${c.id}/1`; toast("Copia creada para el año siguiente (sin aprobación ni auditorías enlazadas).", 4000);
+    }
+    else if (a === "plan-del") {
+      const x = buscaPlan(id) || (actualPlan && actualPlan.id === id ? actualPlan : null); if (!x) return;
+      confirmar(`<p>Se borrará el Plan Anual ${esc(x.anio || "")} con sus ${plural(x.entradas.length, "auditoría programada", "auditorías programadas")}. Las auditorías que ya hayas creado desde él se conservan.</p>`, "Borrar", () => {
+        datos.planes = datos.planes.filter(y => y.id !== x.id); borradores.delete(x.id); guardar(true);
+        if (rutaActual() === "#/plan") renderPlanes(); else location.hash = "#/plan";
+        toast("Plan borrado.", 2500);
+      }, { titulo: "Borrar plan" });
+    }
+    else if (a === "mapa-word" && m) descargarWord(L.documentoMapa(m, new Date().toLocaleDateString("es-ES")), nombreArchivo("docx"), { horizontal: true });
+    else if (a === "hito" && au) {
+      const h = au.hitos[b.dataset.k]; if (!h) return;
+      h.hecho = !h.hecho; if (h.hecho && !lleno(h.fecha)) h.fecha = new Date().toISOString().slice(0, 10);
+      tocado(au); repintarAud();
     }
     // --- Generales ---
     else if (a === "informe") irInforme();

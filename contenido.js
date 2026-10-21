@@ -393,6 +393,9 @@
     introduccion: "Esta auditoría clínica interna evalúa el proceso completo de admisión en el Área de Urgencias, desde que el paciente accede al área asistencial hasta la decisión de ingreso hospitalario, sin incluir el seguimiento posterior en planta. Parte de los resultados del AMFE realizado sobre el proceso y se centra en los riesgos con mayor IPR.",
     objetivoGeneral: "Evaluar el grado de cumplimiento y la eficacia de las medidas de seguridad implantadas en los subprocesos críticos del circuito de admisión en Urgencias, desde que el paciente accede al área asistencial hasta la decisión de ingreso hospitalario, centrándose en los riesgos con mayor IPR del AMFE.",
     objetivosEsp: "Comprobar si las acciones preventivas propuestas en el AMFE se han implantado y se mantienen en la práctica clínica.\nMedir, con un indicador por criterio, el cumplimiento en los siete subprocesos del circuito.\nIdentificar los puntos críticos donde el incumplimiento supone más riesgo para el paciente.\nProponer mejoras realistas, priorizadas y con responsable.\nReforzar la cultura de seguridad del paciente en el servicio.",
+    alcance: "Episodios de pacientes atendidos en el Área de Urgencias con decisión final de ingreso hospitalario, desde la llegada hasta la decisión de ingreso (sin el seguimiento posterior en planta). Siete subprocesos: recepción y registro administrativo, triaje, sala de espera, valoración médica inicial, pruebas diagnósticas y traslado, comunicación de resultados y gestión del ingreso.",
+    planId: "", entradaId: "",
+    hitos: { aprobacion: { hecho: true, fecha: "2025-09-08", nota: "Aprobada por la Gerencia junto con el Jefe de Servicio." }, comunicacion: { hecho: true, fecha: "2025-09-15", nota: "Sesión de servicio y correo al personal." }, validacion: { hecho: false, fecha: "", nota: "" }, devolucion: { hecho: false, fecha: "", nota: "" } },
     criterios: [
       c("c1", TRI, "u8", "Clasificación errónea del nivel de prioridad", "El nivel de prioridad asignado en triaje coincide con el reevaluado por la supervisión clínica."),
       c("c2", REC, "u5", "El sistema no alerta de antecedentes clínicos relevantes", "Los antecedentes clínicos relevantes son visibles en el campo de admisión y el sistema los alerta."),
@@ -407,6 +410,40 @@
     ],
     creado: "2025-09-01T09:00:00.000Z", modificado: "2025-09-01T09:00:00.000Z"
   };
+  // Plan Anual de ejemplo: los hallazgos del AMFE de Urgencias agrupados por subproceso, con el alcance,
+  // los criterios, la frecuencia, los responsables, los recursos y las observaciones de la planificación del caso.
+  const en = (id, titulo, riesgoIds, alcance, criterios, tiposCriterio, documentos, frecuencia, responsables, recursos, meses, observaciones) =>
+    ({ id, titulo, mapaId: "ej-mapa-urg", riesgoIds, hallazgos: "", alcance, criterios, tiposCriterio, documentos, frecuencia, responsables, recursos, horas: "", meses, tipo: "interna", observaciones, auditoriaId: "" });
+  const PLAN_URG = {
+    id: "ej-plan-urg", anio: "2026", ambito: "el Servicio de Urgencias", responsable: "Coordinación de Calidad y Seguridad del Paciente",
+    objetivo: "", introduccion: "", notas: "Plan de ejemplo. Los hallazgos de más riesgo se auditan cada trimestre; por eso el equipo auditor necesita capacidad para tres auditorías al mes. Agosto queda libre por las vacaciones.",
+    capacidad: "3", bloqueados: [8],
+    entradas: [
+      en("e1", REC, ["u5", "u7", "u3"], "Funcionalidad del sistema de información (HIS) en pacientes polimedicados; 10 registros administrativos de pacientes de 80 años o más; 20 registros en los que se omitió información relevante al ingreso.", "Manual del sistema HIS y política de continuidad asistencial. Protocolo de atención a pacientes vulnerables y Plan de Humanización. Protocolo de recogida de datos al ingreso.", ["procedimental"], "Registro administrativo y pantalla del HIS, checklist administrativo, hoja de ingreso, historia clínica y hoja de alergias.", "trimestral", "Supervisor/a de Admisión y Médico Responsable de Área, con apoyo del Técnico de Calidad y del Responsable TIC.", "HIS, protocolos de verificación, capturas de pantalla, plantilla de entrada de datos, checklist de validación, entrevistas a profesionales.", [2, 5, 9, 11], "Incluir la revisión de la historia clínica en el protocolo de admisión."),
+      en("e2", TRI, ["u10", "u8", "u9", "u11"], "Registros de triaje de los últimos 30 días (20 historias de pacientes mayores de 70 años); casos con discrepancias entre triaje y atención médica; triajes de mayores de 75 años sin valoración de fragilidad; colocación de la pulsera en 10 turnos consecutivos.", "Protocolo de triaje y de clasificación de prioridad. Estándares ACSA de valoración inicial e identificación de riesgos. Protocolo de identificación del paciente frágil. Protocolo de identificación segura del paciente.", ["procedimental", "regulatorio"], "Historia clínica electrónica, hoja de triaje, HIS, escalas FRAIL y Barthel, lista de pacientes, observación directa.", "trimestral", "Supervisora de Enfermería y Responsable de Calidad, con el Médico Responsable de Área.", "Checklist de triaje validado, acceso a historias clínicas, revisión cruzada, observación directa, formación puntual previa.", [1, 4, 7, 10], "Incluir sesiones formativas previas al arranque de la auditoría."),
+      en("e3", SAL, ["u15", "u16"], "Pacientes que permanecieron más de 2 horas sin reevaluación en los últimos 15 días; presencia de acompañante en pacientes dependientes.", "Procedimiento de reevaluación en Urgencias. Protocolo de atención a personas con discapacidad y normas de acogida.", ["procedimental"], "Registro enfermero, observaciones del HIS, registro de acompañantes, hoja de enfermería.", "trimestral", "Supervisor/a de guardia y Supervisor/a del Área Social, con el Médico de guardia.", "Observación in situ, hoja de reevaluación, control de tiempos en el HIS, registro de incidencias.", [3, 6, 9, 12], "Valorar si hay condiciones estructurales que limiten las mejoras."),
+      en("e4", VAL, ["u23"], "Historias clínicas sin conciliación de la medicación registrada en las primeras 12 horas.", "Protocolo de conciliación de la medicación. Recomendaciones del Ministerio de Sanidad.", ["procedimental", "normativo"], "Historia clínica, hoja de evolución médica, módulo de prescripción.", "trimestral", "Jefe/a de Urgencias y Farmacia.", "Historia clínica, herramienta de conciliación farmacológica, formularios específicos.", [2, 5, 9, 11], "Hacer una muestra cruzada con la receta electrónica."),
+      en("e5", PRU, ["u29", "u30"], "Uso correcto de la pulsera en pacientes trasladados a Radiología; 10 trayectos recientes desde Radiología (coincidencias y errores).", "Protocolo de identificación del paciente y procedimiento de traslado seguro. Estándares ACSA.", ["procedimental", "regulatorio"], "Registros de triaje, hoja de pruebas, checklist de traslado, registro de salida y entrada.", "trimestral", "Supervisor/a de Enfermería y Técnico de Transporte, con el Técnico de Calidad.", "Observación directa, checklist de identificación, etiquetado visual, simulacro de trazabilidad.", [1, 4, 7, 10], "Comprobar el cumplimiento del checklist de identificación en los traslados."),
+      en("e6", COM, ["u36"], "Casos con resultados críticos no validados o comunicados con más de 2 horas de retraso.", "Protocolo de gestión de resultados críticos. Norma ISO 15189 del laboratorio clínico.", ["procedimental", "regulatorio"], "Registro del laboratorio, trazabilidad en el HIS, hoja de evolución médica.", "semestral", "Médico Responsable de Guardia y Coordinación Médica.", "Resultados en el HIS, actas de sesión clínica, hoja de verificación.", [6, 12], "Revisar qué sistemas de validación y doble lectura existen."),
+      en("e7", ING, ["u45", "u43"], "Ingresos no documentados o con más de 3 horas de retraso tras la orden médica; hora de la orden de ingreso frente a la hora efectiva de ocupación de cama.", "Procedimiento de coordinación entre unidades y de gestión de camas. Instrucción operativa del servicio de salud.", ["procedimental"], "Parte de ingreso, parte de camas, comunicaciones en el HIS, hoja de enfermería.", "trimestral", "Jefatura de Urgencias, Admisión y Supervisión de planta.", "Hojas de traspaso, registro de tiempos, protocolo de asignación de camas, entrevistas a profesionales.", [1, 4, 7, 10], "Medir el tiempo desde la indicación de ingreso hasta el traslado efectivo.")
+    ],
+    roles: {
+      coordinacion: "Coordinación de Calidad y Seguridad del Paciente: planifica, coordina los grupos de trabajo y consolida los resultados.",
+      equipo: "Equipo multidisciplinar: supervisión de Enfermería de Urgencias, un facultativo, enfermería asistencial, TCAE, personal administrativo y un técnico de calidad como observador externo al servicio.",
+      revision: "Supervisión de Enfermería y Jefatura de Servicio: revisan las acciones correctoras y su eficacia en las auditorías de seguimiento.",
+      direccion: "Gerencia y Dirección Médica y de Enfermería: aprueban el plan, lo difunden y garantizan tiempo y recursos.",
+      auditados: "Profesionales del Servicio de Urgencias: conocen el plan con antelación y participan en la definición de mejoras."
+    },
+    aprobacion: { fecha: "2026-01-12", comunicado: true, fechaComunicacion: "2026-01-19", via: "sesión de servicio y correo a todo el personal" },
+    control: {
+      elaborado: [{ nombre: "", cargo: "Coordinador/a de Calidad y Seguridad del Paciente" }, { nombre: "", cargo: "Técnicos de Calidad y Seguridad del Paciente" }],
+      revisado: [{ nombre: "", cargo: "Jefe/a de Servicio de Urgencias" }],
+      aprobado: [{ nombre: "", cargo: "Gerencia del Área de Gestión Sanitaria" }],
+      historial: [{ edicion: "00", fecha: "2026-01-12", cambio: "Documento inicial" }]
+    },
+    creado: "2026-01-12T09:00:00.000Z", modificado: "2026-01-12T09:00:00.000Z"
+  };
+
   // Minicaso inventado (a partir del minicaso de planificación): Hospitalización Médica
   const SUB_HOS = ["Ingreso", "Prescripción y administración", "Aislamiento", "Cuidados de enfermería"];
   const MAPA_HOS = {
@@ -426,8 +463,10 @@
   const EJEMPLOS = {
     mapas: [MAPA_URG, MAPA_HOS],
     auditorias: [AUD_URG],
+    planes: [PLAN_URG],
     fichas: [
       { href: "#/riesgos/ej-mapa-urg", t: "Urgencias · Mapa de Riesgos", s: "AMFE del proceso de admisión: 15 riesgos priorizados y 10 hallazgos clave" },
+      { href: "#/plan/ej-plan-urg", t: "Urgencias · Plan Anual", s: "7 auditorías por subproceso con alcance, criterios, frecuencia, responsables y cronograma" },
       { href: "#/auditoria/ej-aud-urg", t: "Urgencias · Auditoría", s: "Origen, objetivos y los 10 criterios a auditar en 7 subprocesos" },
       { href: "#/riesgos/ej-mapa-hos", t: "Hospitalización · Minicaso", s: "5 riesgos: por qué el IPR no lo es todo" }
     ]
