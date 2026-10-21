@@ -2,7 +2,15 @@
 
 PWA estática (HTML/CSS/JS puro, sin dependencias ni CDN, funciona sin conexión) para planificar, realizar, informar y hacer el seguimiento de auditorías de calidad y seguridad del paciente, paso a paso y aprendiendo mientras se hace: del Mapa de Riesgos a la mejora continua, siguiendo el ciclo PDCA.
 
-Versión actual (en construcción): Plan Anual de Auditorías en seis pasos (alcance, criterios, frecuencia según el IPR, responsables, recursos, cronograma con reparto automático, roles, aprobación y control del documento) con documento en Word, PDF y Excel; Mapa de Riesgos (AMFE con IPR, avisos, pegar desde Excel, gráfico de prioridad, hallazgos clave, Excel e informe en PDF), inicio de la auditoría (origen, datos generales, alcance, objetivos, criterios e hitos), diseño de la auditoría (indicadores, evidencias, instrumentos, muestra con LQAS y sorteo de casos, pilotaje con kappa, hoja de recogida y plan específico en Word/PDF), recogida de datos caso a caso con resultado en vivo, margen de error y decisión LQAS, matriz de resultados en Word, PDF y Excel, e informe (interpretación, análisis de causas, recomendaciones con responsable y prioridad, informe completo y resumen ejecutivo en Word y PDF), ejemplos (mapa, plan anual y auditoría del proceso de admisión en Urgencias, y un minicaso de Hospitalización), «Aprende» en seis temas, glosario, copia de seguridad e importación. Los datos se guardan solo en el dispositivo.
+Recorre el ciclo de mejora completo (Planificar, Hacer, Verificar, Actuar):
+
+- **Mapa de Riesgos** (AMFE): IPR, prioridad, avisos, pegar desde Excel, hallazgos clave.
+- **Plan Anual de Auditorías**: alcance, criterios, frecuencia según el IPR, responsables, recursos, cronograma con reparto automático, roles, aprobación y control del documento.
+- **Auditoría**, en cinco fases: inicio (origen, objetivos, criterios e hitos); diseño (indicadores, evidencias, instrumentos, muestra con LQAS y sorteo, pilotaje con kappa); recogida de datos caso a caso con margen de error y decisión LQAS; informe (interpretación, análisis de causas, recomendaciones, informe completo y resumen ejecutivo); mejora (plan de acción con matriz criticidad × viabilidad y auditoría de seguimiento con comparación antes/después).
+- **Documentos** en Word editable, PDF y Excel, sin dependencias.
+- **Aprende** (seis temas), **Ponte a prueba** (30 preguntas), **glosario** y un **ejemplo completo** (proceso de admisión en Urgencias).
+
+Los datos se guardan solo en el dispositivo; para trabajar en equipo se comparte la copia de seguridad.
 
 Hermana de [Indicadores](https://cjgaland.github.io/indicadores-calidad/) y [Tamaño Muestral](https://cjgaland.github.io/tamano-muestral/).
 

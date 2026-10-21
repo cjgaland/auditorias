@@ -159,14 +159,14 @@
     return { id, subproceso: "", fallo: "", efecto: "", causa: "", g: "", o: "", d: "", medidas: "", clave: false, accion: "", evidencia: "", motivo: "" };
   }
   function nuevoCriterio(id) {
-    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "", ind: nuevoInd(), evid: nuevaEvid(), muestra: nuevaMuestra(), piloto: nuevoPiloto(), recogida: nuevaRecogida(), analisis: nuevoAnalisis() };
+    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "", origenId: "", ind: nuevoInd(), evid: nuevaEvid(), muestra: nuevaMuestra(), piloto: nuevoPiloto(), recogida: nuevaRecogida(), analisis: nuevoAnalisis() };
   }
   function nuevaAuditoria(id, fecha) {
     return {
       id, titulo: "", unidad: "", proceso: "", centro: "",
       origen: { tipo: "", mapaId: "", riesgoIds: [], detalle: "" },
       tipo: "interna", objeto: "proceso", introduccion: "", objetivoGeneral: "", objetivosEsp: "", alcance: "",
-      planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(), ejecucion: nuevaEjecucion(), informe: nuevoInforme(),
+      planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(), ejecucion: nuevaEjecucion(), informe: nuevoInforme(), mejora: nuevaMejora(), seguimientoDe: "",
       criterios: [], creado: fecha, modificado: fecha
     };
   }
@@ -255,7 +255,11 @@
     if (sinDatos) { const p = progresoRecogida(sinDatos); return { k: "recoger", texto: `Recoge los datos de «${corto(sinDatos.titulo || "tu auditoría", 50)}»: ${p.completos} de ${p.total} criterios tienen ya resultado.`, href: `#/auditoria/${sinDatos.id}/recogida`, btn: "Seguir con la recogida" }; }
     const sinInforme = auds.find(a => { const g = progresoInforme(a); return ![1, 2, 3, 4, 5].every(k => g[k]); });
     if (sinInforme) { const g = progresoInforme(sinInforme), paso = [1, 2, 3, 4, 5].find(k => !g[k]); return { k: "informe", texto: `Redacta el informe de «${corto(sinInforme.titulo || "tu auditoría", 50)}»: te falta ${["", "interpretar y clasificar los hallazgos", "analizar las causas de las no conformidades", "proponer recomendaciones con responsable y prioridad", "las conclusiones y el resumen ejecutivo", "validar el borrador con los responsables"][paso]}.`, href: `#/auditoria/${sinInforme.id}/informe/${paso}`, btn: "Seguir con el informe" }; }
-    return { k: "mejora", texto: "Tus informes están listos. El siguiente paso será el plan de acción de mejora y la auditoría de seguimiento, en la próxima versión. Mientras, presenta el informe en la reunión de devolución.", href: "#/auditorias", btn: "Ver mis auditorías" };
+    const sinPlanMejora = auds.find(a => { const g = progresoMejora(a); return !g[1] || !g[2]; });
+    if (sinPlanMejora) { const g = progresoMejora(sinPlanMejora); return { k: "mejora", texto: `Convierte las recomendaciones de «${corto(sinPlanMejora.titulo || "tu auditoría", 50)}» en un plan de acción: ${!g[1] ? "acciones con responsable y plazo" : "priorízalas con la matriz criticidad × viabilidad"}.`, href: `#/auditoria/${sinPlanMejora.id}/mejora/${!g[1] ? 1 : 2}`, btn: "Seguir con el plan de mejora" }; }
+    const sinSeg = auds.find(a => !progresoMejora(a)[3]);
+    if (sinSeg) return { k: "seguimiento", texto: `Programa la auditoría de seguimiento de «${corto(sinSeg.titulo || "tu auditoría", 50)}»: es lo que demuestra si las mejoras han funcionado.`, href: `#/auditoria/${sinSeg.id}/mejora/3`, btn: "Programar el seguimiento" };
+    return { k: "ciclo", texto: "Has recorrido el ciclo completo: riesgos, plan, diseño, recogida, informe y mejora. Revisa el estado de las acciones, actualiza el Mapa de Riesgos con lo aprendido y ponte a prueba con la autoevaluación.", href: "#/prueba", btn: "Ponte a prueba" };
   }
 
   // ---------- Diseño de la auditoría (entrega 3) ----------
@@ -1046,7 +1050,7 @@
   }
 
   // Informe completo (estructura del tema 5 y del modelo de auditoría interna)
-  function documentoInforme(aud, mapa, plan, fecha) {
+  function documentoInforme(aud, mapa, plan, fecha, orig) {
     const C = aud.criterios, D = aud.diseno, I = aud.informe, k = cuentaClasif(aud), R = C.map(resultadoCriterio);
     const B = [{ t: "portada", titulo: aud.titulo || "Informe de auditoría", sub: "Informe de auditoría", extra: [aud.unidad, aud.centro, lleno(D.periodo) ? "Periodo auditado: " + D.periodo : "", `Estado: ${ESTADOS_INFORME[I.estado]}`, "Fecha: " + fecha].filter(lleno) }];
     B.push(...bloquesControl(aud.control), { t: "salto" });
@@ -1070,6 +1074,7 @@
       const porques = an.porques.filter(lleno);
       B.push({ t: "tabla", sinCab: true, anchos: [24, 76], filas: [...f("Hallazgo o riesgo", c.hallazgo), ...f("Criterio", c.criterio), ...f("Indicador", c.ind.nombre), ...f("Evidencia analizada", c.recogida.evidencia), ...f("Resultado", r.n ? `${r.textoValor}${Number.isFinite(r.margen) && c.muestra.objetivo !== "todos" ? ` (±${nfmt(r.margen, 0)})` : ""}${r.lqas && r.lqas.acepta != null ? `. LQAS (n = ${r.lqas.n}, c = ${r.lqas.c}): ${r.lqas.acepta ? "se acepta" : "se rechaza"}` : ""}` : ""), ...f("Interpretación", an.interpretacion), ...f("Por qué ocurre", porques.map((p, j) => `${j + 1}. ${p}`).join("\n")), ...f("Categorías de causa", an.categorias.map(x => CATEGORIAS_CAUSA[x].nom).join(", ")), ...f("Causa raíz", an.causaRaiz)] });
     });
+    if (orig) B.push({ t: "h2", texto: "Comparación con la auditoría inicial" }, ...bloquesComparacion(orig, aud));
     B.push({ t: "h1", texto: "8. Recomendaciones" });
     const conRecs = C.map((c, i) => ({ c, i })).filter(x => x.c.analisis.recs.some(r => lleno(r.texto)));
     if (!conRecs.length) B.push({ t: "p", texto: "Sin recomendaciones registradas." });
@@ -1099,6 +1104,147 @@
     B.push({ t: "h1", texto: "Qué se pide a la Dirección" });
     B.push({ t: "lista", items: ["Respaldar el plan de mejora y los recursos necesarios para las recomendaciones de prioridad alta.", "Acordar los responsables y los plazos en la reunión de devolución de resultados.", "Programar la auditoría de seguimiento para comprobar si las mejoras funcionan."] });
     return { titulo: "Resumen ejecutivo · " + (aud.titulo || ""), bloques: B };
+  }
+
+  // ---------- Mejora y seguimiento (entrega 6) ----------
+  const ESTADOS_ACCION = { pendiente: "Pendiente", curso: "En curso", hecha: "Hecha", verificada: "Verificada" };
+  const NIVEL3 = { "3": "Alta", "2": "Media", "1": "Baja" };
+  const nuevaAccion = id => ({ id, critId: "", recId: "", objetivo: "", accion: "", responsable: "", inicio: "", fin: "", recursos: "", indicador: "", criticidad: "", viabilidad: "", impacto: "", estado: "pendiente", nota: "" });
+  const nuevaMejora = () => ({ acciones: [], fechaSeguimiento: "", seguimientoId: "", notas: "" });
+
+  // Las recomendaciones del informe se convierten en acciones (sin duplicar las ya traídas)
+  function accionesDesdeRecs(aud, genId) {
+    const ya = new Set(aud.mejora.acciones.filter(x => x.recId).map(x => x.critId + "|" + x.recId)), out = [];
+    aud.criterios.forEach(c => c.analisis.recs.filter(r => lleno(r.texto) && !ya.has(c.id + "|" + r.id)).forEach(r => {
+      const est = textoEstandar(c.ind);
+      out.push(Object.assign(nuevaAccion(genId()), {
+        critId: c.id, recId: r.id, accion: r.texto, responsable: r.responsable,
+        criticidad: { alta: "3", media: "2", baja: "1" }[r.prioridad] || "",
+        objetivo: lleno(c.ind.nombre) ? `${c.ind.sentido === "menos" ? "Reducir" : "Aumentar"} el ${c.ind.nombre.charAt(0).toLowerCase() + c.ind.nombre.slice(1)}${est ? " hasta " + est : ""}` : "",
+        indicador: lleno(c.ind.nombre) ? c.ind.nombre + (est ? ` (estándar ${est})` : "") : ""
+      }));
+    }));
+    return out;
+  }
+  // Prioridad de una acción: criticidad × viabilidad (y el impacto para desempatar)
+  const n3 = v => { const n = num(v); return n >= 1 && n <= 3 ? n : 0; };
+  function zonaAccion(a) {
+    const c = n3(a.criticidad), v = n3(a.viabilidad);
+    if (!c || !v) return null;
+    if (c + v >= 5) return { k: "ya", nom: "Hacer ya", orden: 1 };
+    if (c === 3 && v === 1) return { k: "planificar", nom: "Crítica pero difícil: planificar recursos", orden: 2 };
+    if (c + v === 4) return { k: "pronto", nom: "Siguiente en la cola", orden: 3 };
+    if (c === 1 && v >= 2) return { k: "rapida", nom: "Fácil, poco crítica", orden: 4 };
+    return { k: "reconsiderar", nom: "Reconsiderar", orden: 5 };
+  }
+  const ordenarAcciones = acs => acs.map((a, i) => ({ a, i, z: zonaAccion(a) })).sort((x, y) => (x.z ? x.z.orden : 9) - (y.z ? y.z.orden : 9) || n3(y.a.criticidad) - n3(x.a.criticidad) || n3(y.a.impacto) - n3(x.a.impacto) || x.i - y.i).map(x => x.a);
+  const vencida = (a, hoyIso) => lleno(a.fin) && ["pendiente", "curso"].includes(a.estado) && a.fin < String(hoyIso).slice(0, 10);
+
+  function avisosMejora(aud, hoyIso) {
+    const A = [], AC = aud.mejora.acciones, C = aud.criterios;
+    const recsTotales = C.reduce((n, c) => n + c.analisis.recs.filter(r => lleno(r.texto)).length, 0);
+    if (!AC.length) A.push({ nivel: "nota", paso: 1, texto: recsTotales ? `Hay ${recsTotales} recomendaciones en el informe: tráelas al plan de acción con un clic.` : "El plan de acción parte de las recomendaciones del informe. Completa antes el informe o añade acciones a mano." });
+    C.filter(c => c.analisis.clasif === "noConformidad" && !AC.some(a => a.critId === c.id)).forEach(c => A.push({ nivel: "warn", paso: 1, texto: `La no conformidad del criterio ${C.indexOf(c) + 1} (${corto(c.hallazgo, 50)}) no tiene ninguna acción.` }));
+    const sinTraer = C.reduce((n, c) => n + c.analisis.recs.filter(r => r.prioridad === "alta" && lleno(r.texto) && !AC.some(a => a.critId === c.id && a.recId === r.id)).length, 0);
+    if (AC.length && sinTraer) A.push({ nivel: "nota", paso: 1, texto: `${sinTraer === 1 ? "Una recomendación de prioridad alta no está" : sinTraer + " recomendaciones de prioridad alta no están"} en el plan de acción.` });
+    AC.forEach((a, i) => {
+      const n = `Acción ${i + 1}`;
+      if (!lleno(a.accion)) A.push({ nivel: "nota", paso: 1, texto: `${n}: describe qué se va a hacer.` });
+      if (!lleno(a.responsable)) A.push({ nivel: "warn", paso: 1, texto: `${n}: sin responsable. Una acción sin responsable no se hace.` });
+      else if (RESP_VAGO.test(sinTildes(a.responsable))) A.push({ nivel: "warn", paso: 1, texto: `${n}: «${a.responsable}» no es un responsable concreto.` });
+      if (!lleno(a.fin)) A.push({ nivel: "nota", paso: 1, texto: `${n}: pon una fecha de fin (plazo).` });
+      if (lleno(a.inicio) && lleno(a.fin) && a.fin < a.inicio) A.push({ nivel: "error", paso: 1, texto: `${n}: la fecha de fin es anterior a la de inicio.` });
+      if (!lleno(a.indicador)) A.push({ nivel: "nota", paso: 1, texto: `${n}: indica cómo se sabrá si funciona (indicador de seguimiento).` });
+      if (!zonaAccion(a)) A.push({ nivel: "nota", paso: 2, texto: `${n}: valora su criticidad y su viabilidad para priorizarla.` });
+      if (vencida(a, hoyIso)) A.push({ nivel: "warn", paso: 3, texto: `${n}: el plazo venció el ${fmtFecha(a.fin)} y sigue ${ESTADOS_ACCION[a.estado].toLowerCase()}.` });
+    });
+    if (AC.length && AC.every(a => fuerzaMedida(a.accion) === "debil")) A.push({ nivel: "warn", paso: 2, texto: "Todas las acciones son medidas débiles (formación, sensibilización). Añade alguna que cambie el sistema." });
+    if (AC.length && !lleno(aud.mejora.fechaSeguimiento) && !aud.mejora.seguimientoId) A.push({ nivel: "nota", paso: 3, texto: "Fija cuándo se hará la auditoría de seguimiento: semanas para acciones sencillas, meses para cambios estructurales." });
+    return A;
+  }
+  function progresoMejora(aud) {
+    const AC = aud.mejora.acciones, NC = aud.criterios.filter(c => c.analisis.clasif === "noConformidad");
+    return {
+      1: AC.length > 0 && NC.every(c => AC.some(a => a.critId === c.id)) && AC.every(a => lleno(a.accion) && lleno(a.responsable) && lleno(a.fin)),
+      2: AC.length > 0 && AC.every(a => zonaAccion(a)),
+      3: AC.length > 0 && (lleno(aud.mejora.fechaSeguimiento) || !!aud.mejora.seguimientoId)
+    };
+  }
+  const resumenAcciones = (aud, hoyIso) => { const AC = aud.mejora.acciones, o = { total: AC.length, vencidas: AC.filter(a => vencida(a, hoyIso)).length }; Object.keys(ESTADOS_ACCION).forEach(k => { o[k] = AC.filter(a => a.estado === k).length; }); return o; };
+
+  // Auditoría de seguimiento con un clic: hereda el diseño (criterios, indicadores, evidencias, muestra) y empieza limpia
+  function crearSeguimiento(orig, genId, fecha, soloMejoras) {
+    const cl = JSON.parse(JSON.stringify(orig)), s = nuevaAuditoria(genId(), fecha);
+    const crits = cl.criterios.filter(c => !soloMejoras || ["noConformidad", "observacion"].includes(c.analisis.clasif) || orig.mejora.acciones.some(a => a.critId === c.id));
+    Object.assign(s, {
+      titulo: `Seguimiento · ${orig.titulo || "auditoría"}`, unidad: orig.unidad, centro: orig.centro, proceso: orig.proceso, tipo: orig.tipo, objeto: orig.objeto,
+      alcance: orig.alcance, planId: orig.planId, seguimientoDe: orig.id,
+      introduccion: `Auditoría de seguimiento de «${orig.titulo || "la auditoría inicial"}», para comprobar si las acciones de mejora se han implantado y si han sido eficaces.`,
+      objetivoGeneral: `Verificar la eficacia de las acciones de mejora implantadas tras la auditoría «${orig.titulo || "inicial"}», comparando los resultados con los de la auditoría inicial.`,
+      objetivosEsp: "Comprobar que las acciones del plan de mejora se han implantado.\nMedir de nuevo los criterios con el mismo método que en la auditoría inicial.\nDecidir, para cada criterio, si se puede cerrar o si hay que ajustar las acciones y volver a medir.",
+      diseno: Object.assign(cl.diseno, { periodo: "" }),
+      origen: { tipo: "seguimiento", mapaId: cl.origen.mapaId, riesgoIds: cl.origen.riesgoIds.slice(), detalle: `Seguimiento de la auditoría «${orig.titulo || ""}»${lleno(orig.diseno.periodo) ? " (periodo inicial: " + orig.diseno.periodo + ")" : ""}.` }
+    });
+    s.criterios = crits.map(c => Object.assign(nuevoCriterio(genId()), { subproceso: c.subproceso, riesgoId: c.riesgoId, hallazgo: c.hallazgo, criterio: c.criterio, origenId: c.id, ind: c.ind, evid: c.evid, muestra: Object.assign(c.muestra, { sorteo: [] }) }));
+    return s;
+  }
+  // Comparación antes / después y decisión: cerrar, mejora parcial (no cerrar) o acciones no eficaces
+  function compararSeguimiento(orig, seg) {
+    return seg.criterios.map((c, i) => {
+      const o = orig.criterios.find(x => x.id === c.origenId) || orig.criterios.find(x => x.riesgoId && x.riesgoId === c.riesgoId);
+      const ra = o ? resultadoCriterio(o) : null, rd = resultadoCriterio(c), menos = c.ind.sentido === "menos";
+      const fila = { i, c, o, antes: ra, despues: rd, cambio: "", decision: "", texto: "" };
+      if (!rd.n) { fila.decision = "pendiente"; fila.texto = "Faltan los datos del seguimiento."; return fila; }
+      if (ra && ra.n) { const d = (rd.valor - ra.valor) * (menos ? -1 : 1); fila.dif = d; fila.cambio = d > 5 ? "mejora" : d < -5 ? "empeora" : "igual"; }
+      const alcanza = rd.estado === "verde" && rd.cumpleObservado !== false;
+      if (alcanza) { fila.decision = "cerrar"; fila.texto = "Se alcanza el estándar: las acciones han sido eficaces. Se puede cerrar y mantener la vigilancia habitual."; }
+      else if (fila.cambio === "mejora") { fila.decision = "parcial"; fila.texto = "Mejora respecto a la auditoría inicial, pero sin alcanzar el estándar. No se cierra: analizar los casos que siguen sin cumplir, ajustar las acciones y volver a medir."; }
+      else if (rd.estado === "verde") { fila.decision = "vigilar"; fila.texto = "No hay evidencia de incumplimiento, pero el valor observado sigue por debajo del estándar. Mantener la vigilancia y repetir con una muestra mayor."; }
+      else { fila.decision = "ineficaz"; fila.texto = "Sin mejora suficiente: las acciones no han sido eficaces. Revisar las causas y reforzar las medidas (mejor si cambian el sistema)."; }
+      return fila;
+    });
+  }
+  const DECISION_TXT = { cerrar: "Cerrar", parcial: "Mejora parcial: no cerrar", vigilar: "Vigilar", ineficaz: "Acciones no eficaces", pendiente: "Pendiente" };
+  const FONDO_DECISION = { cerrar: "DCFCE7", parcial: "FEF3C7", vigilar: "FEF3C7", ineficaz: "FFE4E6", pendiente: "F1F5F9" };
+
+  function bloquesComparacion(orig, seg) {
+    const F = compararSeguimiento(orig, seg), txtR = (r, c) => !r || !r.n ? "—" : r.lqas && r.lqas.acepta != null ? `${r.textoValor} · LQAS ${r.lqas.acepta ? "acepta" : "rechaza"}` : r.textoValor;
+    return [
+      { t: "p", texto: `Comparación con la auditoría inicial «${orig.titulo}»${lleno(orig.diseno.periodo) ? " (" + orig.diseno.periodo + ")" : ""}.` },
+      { t: "tabla", fuente: 8, cab: ["Nº", "Subproceso", "Indicador", "Antes", "Después", "Cambio", "Decisión"], anchos: [4, 14, 26, 15, 15, 9, 17], filas: F.map(f => [{ texto: String(f.i + 1), centro: true }, f.c.subproceso, f.c.ind.nombre, txtR(f.antes), txtR(f.despues), { texto: { mejora: "▲ Mejora", empeora: "▼ Empeora", igual: "= Igual" }[f.cambio] || "", centro: true }, { texto: DECISION_TXT[f.decision], negrita: true, fondo: FONDO_DECISION[f.decision] }]) },
+      { t: "lista", items: F.filter(f => f.decision !== "pendiente").map(f => `Criterio ${f.i + 1} (${f.c.subproceso}): ${f.texto}`) }
+    ];
+  }
+
+  function documentoPlanMejora(aud, fecha, hoyIso) {
+    const AC = ordenarAcciones(aud.mejora.acciones), C = aud.criterios, rs = resumenAcciones(aud, hoyIso);
+    const B = [{ t: "portada", titulo: "Plan de acción de mejora", sub: aud.titulo, extra: [aud.unidad, lleno(aud.mejora.fechaSeguimiento) ? "Auditoría de seguimiento prevista: " + fmtFecha(aud.mejora.fechaSeguimiento) : "", "Fecha: " + fecha].filter(lleno) }];
+    B.push(...bloquesControl(aud.control), { t: "salto" });
+    B.push({ t: "h1", texto: "1. Acciones de mejora" });
+    B.push({ t: "p", texto: `${AC.length} acciones: ${Object.keys(ESTADOS_ACCION).map(k => `${rs[k]} ${ESTADOS_ACCION[k].toLowerCase()}`).join(", ")}${rs.vencidas ? `; ${rs.vencidas} con el plazo vencido` : ""}. Ordenadas por prioridad (criticidad × viabilidad).` });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Hallazgo", "Acción", "Responsable", "Plazo", "Prioridad", "Estado"], anchos: [4, 18, 32, 16, 12, 10, 8], filas: AC.map((a, i) => { const c = C.find(x => x.id === a.critId), z = zonaAccion(a); return [{ texto: String(i + 1), centro: true }, c ? c.hallazgo : "", a.accion, a.responsable, [fmtFecha(a.inicio), fmtFecha(a.fin)].filter(lleno).join(" – "), { texto: z ? z.nom : "", fondo: z ? { ya: "FFE4E6", planificar: "FFEDD5", pronto: "FEF3C7", rapida: "DCFCE7", reconsiderar: "F1F5F9" }[z.k] : "" }, { texto: ESTADOS_ACCION[a.estado], fondo: vencida(a, hoyIso) ? "FECDD3" : a.estado === "verificada" || a.estado === "hecha" ? "DCFCE7" : "" }]; }) });
+    B.push({ t: "h1", texto: "2. Ficha de cada acción" });
+    AC.forEach((a, i) => {
+      const f = (k, v) => lleno(v) ? [[{ texto: k, negrita: true, fondo: "F1F5F9" }, v]] : [], z = zonaAccion(a);
+      B.push({ t: "h2", texto: `Acción ${i + 1}` });
+      B.push({ t: "tabla", sinCab: true, anchos: [26, 74], filas: [...f("Objetivo", a.objetivo), ...f("Acción", a.accion), ...f("Tipo de medida", FUERZAS[fuerzaMedida(a.accion)] ? FUERZAS[fuerzaMedida(a.accion)].nom : ""), ...f("Responsable", a.responsable), ...f("Inicio y fin", [fmtFecha(a.inicio), fmtFecha(a.fin)].filter(lleno).join(" – ")), ...f("Recursos", a.recursos), ...f("Indicador de seguimiento", a.indicador), ...f("Criticidad / viabilidad / impacto", [a.criticidad, a.viabilidad, a.impacto].some(lleno) ? `${NIVEL3[a.criticidad] || "—"} / ${NIVEL3[a.viabilidad] || "—"} / ${NIVEL3[a.impacto] || "—"}${z ? " → " + z.nom : ""}` : ""), ...f("Estado", ESTADOS_ACCION[a.estado] + (lleno(a.nota) ? ". " + a.nota : ""))] });
+    });
+    B.push({ t: "h1", texto: "3. Matriz criticidad × viabilidad" });
+    const celda = (c, v) => AC.map((a, i) => n3(a.criticidad) === c && n3(a.viabilidad) === v ? String(i + 1) : null).filter(Boolean).join(", ");
+    const fz = (c, v) => c + v >= 5 ? "FECDD3" : c === 3 && v === 1 ? "FFEDD5" : c + v === 4 ? "FEF3C7" : "F1F5F9";
+    B.push({ t: "tabla", cab: ["Criticidad ↓ / Viabilidad →", "Baja", "Media", "Alta"], anchos: [28, 24, 24, 24], filas: [3, 2, 1].map(c => [{ texto: NIVEL3[c], negrita: true }, ...[1, 2, 3].map(v => ({ texto: celda(c, v), centro: true, negrita: true, fondo: fz(c, v) }))]) });
+    B.push({ t: "p", estilo: "nota", texto: "Números = nº de acción. Rojo: hacer ya (muy crítica y viable). Naranja: crítica pero difícil (planificar recursos). Amarillo: siguiente en la cola. Gris: poco crítica." });
+    B.push({ t: "h1", texto: "4. Seguimiento" });
+    B.push({ t: "p", texto: `${lleno(aud.mejora.fechaSeguimiento) ? `La auditoría de seguimiento está prevista para el ${fmtFecha(aud.mejora.fechaSeguimiento)}.` : "Fecha de la auditoría de seguimiento pendiente de fijar."} Se repetirán los criterios con el mismo método para comprobar la eficacia de las acciones. Si la mejora es parcial, no se cerrará: se ajustarán las acciones y se volverá a medir.` });
+    if (lleno(aud.mejora.notas)) B.push({ t: "p", texto: aud.mejora.notas });
+    return { titulo: "Plan de acción de mejora · " + (aud.titulo || ""), bloques: B };
+  }
+  function hojasExcelMejora(aud, fecha, hoyIso) {
+    const T = (texto, estilo = "celda") => ({ texto: texto == null ? "" : String(texto), estilo }), AC = ordenarAcciones(aud.mejora.acciones);
+    const cab = ["Nº", "Criterio", "Objetivo", "Acción", "Tipo de medida", "Responsable", "Inicio", "Fin", "Recursos", "Indicador de seguimiento", "Criticidad", "Viabilidad", "Impacto", "Prioridad", "Estado", "Nota"];
+    const f = [[T("Plan de acción de mejora · " + (aud.titulo || ""), "titulo")], [T("Exportado de la app Auditorías · " + fecha, "sub")], cab.map(x => T(x, "cab"))]; f[0][0].combinar = cab.length;
+    AC.forEach((a, i) => { const c = aud.criterios.find(x => x.id === a.critId), z = zonaAccion(a); f.push([T(i + 1, "centro"), T(c ? (aud.criterios.indexOf(c) + 1) + ". " + c.subproceso : ""), T(a.objetivo), T(a.accion), T(FUERZAS[fuerzaMedida(a.accion)] ? FUERZAS[fuerzaMedida(a.accion)].nom : ""), T(a.responsable), T(fmtFecha(a.inicio), "centro"), T(fmtFecha(a.fin), vencida(a, hoyIso) ? "muyalto" : "centro"), T(a.recursos), T(a.indicador), T(NIVEL3[a.criticidad] || "", "centro"), T(NIVEL3[a.viabilidad] || "", "centro"), T(NIVEL3[a.impacto] || "", "centro"), T(z ? z.nom : ""), T(ESTADOS_ACCION[a.estado], "centro"), T(a.nota)]); });
+    return { estilos: ESTILOS_XLSX, hojas: [{ nombre: "Plan de mejora", filas: f, opciones: { anchoColumnas: [5, 22, 30, 40, 16, 22, 11, 11, 24, 30, 10, 10, 10, 22, 11, 30], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 } } }] };
   }
 
   // Excel del plan: hoja con el plan y hoja con el cronograma
@@ -1140,10 +1286,12 @@
     rec: { id: "id", texto: [1500], responsable: [300], prioridad: { en: ["", ...Object.keys(PRIORIDADES)] }, motivo: [1000], plazo: [100] },
     analisis: { clasif: { en: ["", ...Object.keys(CLASIF)] }, interpretacion: [3000], porques: { lista: 1000, max: 5, keepEmpty: 5 }, categorias: { lista: 20, max: 6, en: Object.keys(CATEGORIAS_CAUSA) }, causaRaiz: [2000], recs: { de: "rec", max: 20 } },
     informe: { conclusiones: [5000], fortalezas: [3000], resumen: [5000], destinatarios: [500], estado: { en: Object.keys(ESTADOS_INFORME) } },
-    criterio: { id: "id", subproceso: [200], riesgoId: "ref", hallazgo: [1000], criterio: [1000], ind: { obj: "ind" }, evid: { obj: "evid" }, muestra: { obj: "muestra" }, piloto: { obj: "piloto" }, recogida: { obj: "recogida" }, analisis: { obj: "analisis" } },
+    accion: { id: "id", critId: "ref", recId: "ref", objetivo: [1000], accion: [1500], responsable: [300], inicio: [20], fin: [20], recursos: [1000], indicador: [800], criticidad: { en: ["", "1", "2", "3"] }, viabilidad: { en: ["", "1", "2", "3"] }, impacto: { en: ["", "1", "2", "3"] }, estado: { en: Object.keys(ESTADOS_ACCION) }, nota: [1000] },
+    mejora: { acciones: { de: "accion", max: 200 }, fechaSeguimiento: [20], seguimientoId: "ref", notas: [3000] },
+    criterio: { id: "id", subproceso: [200], riesgoId: "ref", origenId: "ref", hallazgo: [1000], criterio: [1000], ind: { obj: "ind" }, evid: { obj: "evid" }, muestra: { obj: "muestra" }, piloto: { obj: "piloto" }, recogida: { obj: "recogida" }, analisis: { obj: "analisis" } },
     hito: { hecho: "b", fecha: [20], nota: [500] },
     hitos: { aprobacion: { obj: "hito" }, comunicacion: { obj: "hito" }, validacion: { obj: "hito" }, devolucion: { obj: "hito" } },
-    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, diseno: { obj: "diseno" }, control: { obj: "control" }, ejecucion: { obj: "ejecucion" }, informe: { obj: "informe" }, criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
+    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, diseno: { obj: "diseno" }, control: { obj: "control" }, ejecucion: { obj: "ejecucion" }, informe: { obj: "informe" }, mejora: { obj: "mejora" }, seguimientoDe: "ref", criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
     persona: { nombre: [200], cargo: [200] },
     revision: { edicion: [10], fecha: [40], cambio: [500] },
     control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "revision", max: 50 } },
@@ -1153,7 +1301,7 @@
     plan: { id: "id", anio: [10], ambito: [300], responsable: [300], objetivo: [2000], introduccion: [4000], notas: [3000], capacidad: [3], bloqueados: { nums: [1, 12], max: 12 }, entradas: { de: "entrada", max: 100 }, roles: { obj: "roles" }, aprobacion: { obj: "aprobacion" }, control: { obj: "control" }, creado: [40], modificado: [40] }
   };
   const FABRICA = { riesgo: nuevoRiesgo, mapa: id => nuevoMapa(id, ""), origen: () => nuevaAuditoria("", "").origen, criterio: nuevoCriterio, auditoria: id => nuevaAuditoria(id, ""),
-    hito: nuevoHito, hitos: nuevosHitos, ind: nuevoInd, evid: nuevaEvid, muestra: nuevaMuestra, piloto: nuevoPiloto, par: () => ({ a: "", b: "" }), diseno: nuevoDiseno, caso: () => nuevoCaso(), recogida: nuevaRecogida, ejecucion: nuevaEjecucion, rec: nuevaRec, analisis: nuevoAnalisis, informe: nuevoInforme, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
+    hito: nuevoHito, hitos: nuevosHitos, ind: nuevoInd, evid: nuevaEvid, muestra: nuevaMuestra, piloto: nuevoPiloto, par: () => ({ a: "", b: "" }), diseno: nuevoDiseno, caso: () => nuevoCaso(), recogida: nuevaRecogida, ejecucion: nuevaEjecucion, rec: nuevaRec, analisis: nuevoAnalisis, informe: nuevoInforme, accion: nuevaAccion, mejora: nuevaMejora, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
     control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), roles: () => nuevoPlan("", "").roles, aprobacion: () => nuevoPlan("", "").aprobacion,
     entrada: nuevaEntrada, plan: id => nuevoPlan(id, "") };
 
@@ -1225,6 +1373,8 @@
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
+    ESTADOS_ACCION, NIVEL3, nuevaAccion, accionesDesdeRecs, zonaAccion, ordenarAcciones, vencida, avisosMejora, progresoMejora, resumenAcciones,
+    crearSeguimiento, compararSeguimiento, DECISION_TXT, bloquesComparacion, documentoPlanMejora, hojasExcelMejora,
     CLASIF, CATEGORIAS_CAUSA, PRIORIDADES, ESTADOS_INFORME, FUERZAS, nuevaRec, clasificacionSugerida, interpretacionSugerida, fuerzaMedida, palabrasNoNeutras,
     avisosInforme, progresoInforme, resumenEjecutivoSugerido, documentoInforme, documentoResumenEjecutivo,
     nuevoCaso, pareceIdentificador, prepararCasos, margen95, resultadoCriterio, avisosRecogida, progresoRecogida, sugerirEvidencia, ESTADO_TXT, documentoResultados, hojasExcelRecogida,

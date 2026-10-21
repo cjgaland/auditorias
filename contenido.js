@@ -299,7 +299,7 @@
           <p><b>Factores de éxito</b>: compromiso de la Dirección, implicación de los profesionales, recursos y comunicación bidireccional. <b>Barreras</b>: falta de seguimiento real, resistencia al cambio, sobrecarga y comunicación ineficaz.</p>` }
       ],
       minicaso: `<p>La profilaxis antibiótica prequirúrgica se cumple en el <b>75 %</b> de los casos (estándar 100 %). Plan: formación del personal de quirófano, hoja de verificación actualizada y recordatorios visuales; responsables, la supervisora de quirófano y el jefe de bloque; plazo, 2 meses. A los 3 meses, la auditoría de seguimiento muestra un <b>95 %</b>: mejora notable, pero sin alcanzar el estándar. Se analizan los casos incumplidos (cirugías urgentes, cambios de turno), se ajustan las medidas y se programa otra auditoría de seguimiento. <b>No se cierra ante una mejora parcial.</b></p>`,
-      practica: { texto: "Volver al inicio", href: "#/" }
+      practica: { texto: "Ver el plan de mejora del ejemplo", href: "#/auditoria/ej-aud-urg/mejora/2" }
     }
   ];
 
@@ -389,7 +389,7 @@
   const casos = (n, nos, pref = "HC", obs = {}) => Array.from({ length: n }, (_, i) => ({ codigo: `${pref}-${String(i + 1).padStart(2, "0")}`, listado: "", valor: nos.includes(i + 1) ? "no" : "si", obs: obs[i + 1] || "" }));
   const rec = (cs, evidencia, comentario, observaciones = "") => ({ casos: cs, evidencia, comentario, observaciones });
   const c = (id, subproceso, riesgoId, hallazgo, criterio, ind = {}, evid = {}, muestra = {}, pares = [], recogida = null) => ({
-    id, subproceso, riesgoId, hallazgo, criterio,
+    id, subproceso, riesgoId, hallazgo, criterio, origenId: "",
     ind: Object.assign({ nombre: "", tipo: "proceso", numerador: "", denominador: "", sentido: "mas", estandar: "", fuente: "", exclusiones: "", cumpleSi: "", noAplicaSi: "" }, ind),
     evid: Object.assign({ tipos: [], triangulacion: "", principios: [], instrumentos: [], justificacion: "" }, evid),
     muestra: Object.assign({ objetivo: "decidir", N: "", e: "10", p: "50", beta: "20", umbral: "", n: "", metodo: "aleatorio", unidad: "", sorteo: [] }, muestra),
@@ -575,7 +575,70 @@
     creado: "2026-01-12T09:00:00.000Z", modificado: "2026-01-12T09:00:00.000Z"
   };
 
-  AUD_URG.criterios.forEach(cr => { if (ANALISIS_URG[cr.id]) cr.analisis = ANALISIS_URG[cr.id]; });
+  AUD_URG.criterios.forEach(cr => { if (ANALISIS_URG[cr.id]) { cr.analisis = ANALISIS_URG[cr.id]; cr.analisis.recs.forEach((r, k) => { r.id = cr.id + "r" + k; }); } });
+
+  // Plan de acción de mejora: una acción por recomendación. [viabilidad, impacto, inicio, fin, estado, recursos]
+  const ACC_URG = {
+    c1r0: ["3", "2", "2025-11-03", "2025-12-19", "hecha", "Dos sesiones de 2 horas en horario laboral; casos clínicos de triaje"],
+    c1r1: ["3", "2", "2026-01-12", "2026-12-18", "curso", "Técnico de Calidad: 4 horas al trimestre"],
+    c2r0: ["2", "3", "2025-11-03", "2026-02-27", "hecha", "Desarrollo en el módulo de admisión (servicio TIC)"],
+    c2r1: ["3", "2", "2025-11-17", "2025-12-19", "hecha", "Una sesión por turno para el personal administrativo"],
+    c3r0: ["2", "3", "2025-11-03", "2026-01-30", "verificada", "Configuración de alertas en el sistema de Urgencias (TIC)"],
+    c3r1: ["3", "2", "2025-11-03", "2025-12-19", "verificada", "Actualización del protocolo de triaje y difusión"],
+    c4r0: ["2", "3", "2025-11-03", "2026-03-31", "hecha", "Cambio en la prescripción electrónica (Farmacia y TIC)"],
+    c4r1: ["3", "2", "2025-11-17", "2025-12-19", "hecha", "Sesión clínica de 1 hora"],
+    c5r0: ["3", "3", "2025-11-03", "2026-01-30", "hecha", "Escala FRAIL integrada en el registro de triaje"],
+    c5r1: ["3", "2", "2025-11-17", "2026-01-30", "hecha", "Sesiones prácticas de 1 hora"],
+    c6r0: ["2", "3", "2025-11-03", "2026-02-27", "hecha", "Integración del laboratorio con el sistema de Urgencias (TIC)"],
+    c6r1: ["3", "2", "2025-11-03", "2025-11-28", "verificada", "Listado de guardias en la intranet, actualizado por la Jefatura"],
+    c7r0: ["1", "3", "2026-01-12", "2026-12-18", "curso", "Panel de camas en tiempo real: proyecto con Admisión y TIC"],
+    c7r1: ["3", "2", "2025-11-10", "2025-12-19", "hecha", "Reunión semanal de 30 minutos"],
+    c8r0: ["3", "3", "2025-11-03", "2026-01-30", "hecha", "Protocolo de acompañamiento y hoja de vigilancia"],
+    c8r1: ["2", "2", "2025-11-03", "2026-02-27", "hecha", "Campo en el registro de triaje (TIC)"],
+    c9r0: ["3", "3", "2025-11-03", "2026-01-30", "hecha", "Procedimiento operativo y difusión"],
+    c9r1: ["3", "2", "2025-12-01", "2026-01-30", "hecha", "Dos sesiones formativas"],
+    c10r0: ["2", "3", "2025-11-03", "2026-01-30", "verificada", "Punto de control en el software de triaje (TIC)"],
+    c10r1: ["3", "2", "2025-11-03", "2025-12-19", "verificada", "Auditoría rápida semanal de 10 pacientes"]
+  };
+  AUD_URG.mejora = {
+    acciones: AUD_URG.criterios.flatMap(cr => cr.analisis.recs.map(r => { const v = ACC_URG[r.id] || ["", "", "", "", "pendiente", ""], est = cr.ind.estandar ? `${cr.ind.sentido === "menos" ? "≤" : "≥"} ${cr.ind.estandar} %` : "";
+      return { id: "a" + r.id, critId: cr.id, recId: r.id, objetivo: `${cr.ind.sentido === "menos" ? "Reducir" : "Aumentar"} el ${cr.ind.nombre.charAt(0).toLowerCase() + cr.ind.nombre.slice(1)} hasta ${est}`, accion: r.texto, responsable: r.responsable,
+        inicio: v[2], fin: v[3], recursos: v[5], indicador: `${cr.ind.nombre} (estándar ${est})`, criticidad: r.prioridad === "alta" ? "3" : r.prioridad === "media" ? "2" : "1", viabilidad: v[0], impacto: v[1], estado: v[4], nota: "" }; })),
+    fechaSeguimiento: "2026-02-16", seguimientoId: "ej-aud-urg-seg", notas: "Reunión de devolución el 5 de noviembre de 2025: se acordó el plan con la Jefatura y la Supervisión. La auditoría de seguimiento se centra en las dos no conformidades y en la identificación con pulsera."
+  };
+  AUD_URG.seguimientoDe = "";
+  AUD_URG.hitos.devolucion = { hecho: true, fecha: "2025-11-05", nota: "Presentación a la Dirección y al equipo; plan de mejora acordado." };
+  AUD_URG.informe.estado = "aprobado";
+
+  // Auditoría de seguimiento (cuatro meses después): hereda el diseño de tres criterios y compara antes y después
+  const SEG_CRITS = { c3: [10, [4]], c6: [10, [3, 7]], c10: [14, []] };
+  const AUD_URG_SEG = JSON.parse(JSON.stringify(Object.assign({}, AUD_URG, { mejora: undefined })));
+  Object.assign(AUD_URG_SEG, {
+    id: "ej-aud-urg-seg", titulo: "Seguimiento · Auditoría interna del proceso de admisión en Urgencias", seguimientoDe: "ej-aud-urg",
+    introduccion: "Auditoría de seguimiento de la auditoría interna del proceso de admisión en Urgencias, para comprobar si las acciones de mejora se han implantado y si han sido eficaces.",
+    objetivoGeneral: "Verificar la eficacia de las acciones de mejora implantadas tras la auditoría inicial, comparando los resultados con los de esa auditoría.",
+    objetivosEsp: "Comprobar que las acciones del plan de mejora se han implantado.\nMedir de nuevo los criterios con el mismo método que en la auditoría inicial.\nDecidir, para cada criterio, si se puede cerrar o si hay que ajustar las acciones y volver a medir.",
+    origen: { tipo: "seguimiento", mapaId: "ej-mapa-urg", riesgoIds: ["u15", "u36", "u11"], detalle: "Seguimiento de la auditoría interna del proceso de admisión en Urgencias (periodo inicial: mayo de 2025)." },
+    mejora: { acciones: [{ id: "as1", critId: "s-c6", recId: "", objetivo: "Aumentar el % de resultados críticos comunicados en menos de 60 minutos hasta ≥ 90 %", accion: "Analizar los dos casos sin comunicación a tiempo (cambio de turno) y añadir al circuito de alerta la confirmación de lectura obligatoria por el facultativo responsable.", responsable: "Servicio de Informática Clínica", inicio: "2026-03-09", fin: "2026-04-30", recursos: "Ajuste del circuito de alertas (TIC)", indicador: "% de resultados críticos comunicados en menos de 60 minutos (estándar ≥ 90 %)", criticidad: "3", viabilidad: "2", impacto: "3", estado: "hecha", nota: "" }], fechaSeguimiento: "2026-06-15", seguimientoId: "", notas: "Nueva medición del criterio 6 en junio." },
+    informe: { conclusiones: "Las acciones han sido eficaces en la reevaluación de los pacientes en espera (de 6 a 9 de 10) y en la identificación con pulsera (14 de 14): se pueden cerrar. La comunicación de resultados críticos mejora de 6 a 8 de 10, pero no alcanza el estándar del 90 %: no se cierra. Los dos casos que siguen fuera de plazo coinciden con cambios de turno; se ajusta el circuito y se repetirá la medición en junio.", fortalezas: "Implantación rápida de las alertas automáticas y del punto de control de la pulsera.", resumen: "", destinatarios: "Gerencia, Dirección Médica y de Enfermería, y Jefatura del Servicio de Urgencias", estado: "validado" },
+    diseno: Object.assign({}, AUD_URG.diseno, { periodo: "Febrero de 2026" }),
+    ejecucion: { inicio: "2026-02-16", fin: "2026-02-27", auditores: "Supervisión de Enfermería de Urgencias y Técnico de Calidad", incidencias: "" },
+    hitos: { aprobacion: { hecho: true, fecha: "2026-02-02", nota: "" }, comunicacion: { hecho: true, fecha: "2026-02-09", nota: "" }, validacion: { hecho: true, fecha: "2026-03-04", nota: "" }, devolucion: { hecho: false, fecha: "", nota: "" } },
+    control: { elaborado: [{ nombre: "", cargo: "Técnicos de Calidad y Seguridad del Paciente" }], revisado: [{ nombre: "", cargo: "Jefe/a de Servicio de Urgencias" }], aprobado: [{ nombre: "", cargo: "Gerencia del Área de Gestión Sanitaria" }], historial: [{ edicion: "00", fecha: "2026-03-04", cambio: "Documento inicial" }] },
+    creado: "2026-02-02T09:00:00.000Z", modificado: "2026-03-04T09:00:00.000Z"
+  });
+  delete AUD_URG_SEG.mejora.undefined;
+  AUD_URG_SEG.criterios = AUD_URG_SEG.criterios.filter(cr => SEG_CRITS[cr.id]).map(cr => {
+    const [n, nos] = SEG_CRITS[cr.id], rCasos = casos(n, nos, cr.id === "c10" ? "OB" : cr.id === "c6" ? "RC" : "HC");
+    const interp = { c3: "9 de 10 pacientes con reevaluación registrada (90 %): el LQAS acepta y se alcanza el estándar del 90 %. Antes: 6 de 10 (rechazo).", c6: "8 de 10 resultados críticos comunicados en menos de 60 minutos (80 %). El LQAS acepta (8 ≥ 7), pero el valor sigue por debajo del 90 %. Antes: 6 de 10 (rechazo). Mejora parcial.", c10: "14 de 14 pacientes con pulsera (100 %): el LQAS acepta y se supera el estándar del 95 %. Antes: 13 de 14 en los primeros casos." }[cr.id];
+    return Object.assign(cr, { id: "s-" + cr.id, origenId: cr.id, muestra: Object.assign(cr.muestra, { sorteo: [] }), piloto: { pares: [], nota: "" },
+      recogida: { casos: rCasos, evidencia: cr.recogida.evidencia, comentario: "", observaciones: "" },
+      analisis: { clasif: cr.id === "c6" ? "observacion" : "conformidad", interpretacion: interp, porques: ["", "", "", "", ""], categorias: [], causaRaiz: cr.id === "c6" ? "Los casos fuera de plazo coinciden con cambios de turno: la alerta llega, pero no se confirma su lectura." : "", recs: cr.id === "c6" ? [{ id: "s-c6r0", texto: "Añadir al circuito de alerta la confirmación de lectura obligatoria por el facultativo responsable.", responsable: "Servicio de Informática Clínica", prioridad: "alta", motivo: "Los fallos se concentran en los cambios de turno.", plazo: "" }] : [] }
+    });
+  });
+  AUD_URG_SEG.mejora.acciones[0].recId = "s-c6r0";
+
+  // Minicaso inventado (a partir del minicaso de planificación): Hospitalización Médica
 
   // Minicaso inventado (a partir del minicaso de planificación): Hospitalización Médica
   const SUB_HOS = ["Ingreso", "Prescripción y administración", "Aislamiento", "Cuidados de enfermería"];
@@ -595,16 +658,52 @@
   };
   const EJEMPLOS = {
     mapas: [MAPA_URG, MAPA_HOS],
-    auditorias: [AUD_URG],
+    auditorias: [AUD_URG, AUD_URG_SEG],
     planes: [PLAN_URG],
     fichas: [
       { href: "#/riesgos/ej-mapa-urg", t: "Urgencias · Mapa de Riesgos", s: "AMFE del proceso de admisión: 15 riesgos priorizados y 10 hallazgos clave" },
       { href: "#/plan/ej-plan-urg", t: "Urgencias · Plan Anual", s: "7 auditorías por subproceso con alcance, criterios, frecuencia, responsables y cronograma" },
       { href: "#/auditoria/ej-aud-urg", t: "Urgencias · Auditoría", s: "Origen, objetivos y los 10 criterios a auditar en 7 subprocesos" },
+      { href: "#/auditoria/ej-aud-urg/mejora/1", t: "Urgencias · Plan de mejora", s: "20 acciones priorizadas con la matriz criticidad × viabilidad" },
+      { href: "#/auditoria/ej-aud-urg-seg/mejora/3", t: "Urgencias · Seguimiento", s: "Antes y después: dos criterios se cierran y uno mejora sin llegar al estándar" },
       { href: "#/riesgos/ej-mapa-hos", t: "Hospitalización · Minicaso", s: "5 riesgos: por qué el IPR no lo es todo" }
     ]
   };
 
-  const API = { TEMAS, GLOSARIO, EJEMPLOS };
+  // ---------- Autoevaluación: 30 preguntas, 5 por tema (t = tema, ok = índice de la respuesta correcta) ----------
+  const TEST = [
+    {"t": 1, "q": "¿Cuál es la principal finalidad de una auditoría en el ámbito sanitario?", "o": ["Evaluar solo la satisfacción del personal.", "Detectar exclusivamente errores administrativos.", "Verificar la conformidad de procesos y fomentar la mejora continua.", "Reducir los costes de personal.", "Sustituir la normativa vigente."], "ok": 2, "e": "En sanidad, la auditoría busca comprobar que los procesos se ajustan a normas y estándares y, además, generar información para aprender y mejorar de forma continua."},
+    {"t": 1, "q": "Según las normas internacionales, una auditoría es un proceso que debe ser:", "o": ["Esporádico y no documentado.", "Dependiente y subjetivo.", "Sistematizado, independiente y documentado.", "Realizado solo por inspectores externos.", "Exclusivo para organizaciones privadas."], "ok": 2, "e": "La ISO 19011 y otras guías lo definen como un proceso sistemático, independiente y documentado para evaluar evidencias y verificar conformidad."},
+    {"t": 1, "q": "¿Cuál de estos principios NO corresponde a una auditoría bien realizada?", "o": ["Objetividad.", "Confidencialidad.", "Subjetividad.", "Independencia.", "Orientación a la mejora."], "ok": 2, "e": "Una auditoría se basa en objetividad, sistematicidad, independencia, confidencialidad y enfoque de mejora. La subjetividad debe evitarse."},
+    {"t": 1, "q": "¿Qué tipo de auditoría se realiza dentro de la propia organización?", "o": ["Auditoría externa.", "Autoauditoría interna.", "Acreditación internacional.", "Inspección regulatoria.", "Evaluación de producto final por clientes."], "ok": 1, "e": "Las auditorías internas o autoauditorías verifican el cumplimiento de normas y planes dentro de la organización."},
+    {"t": 1, "q": "¿Qué relación existe entre el Mapa de Riesgos y la auditoría?", "o": ["La auditoría sustituye al Mapa de Riesgos.", "No existe relación entre ambos.", "El Mapa identifica procesos críticos y la auditoría verifica y evalúa su control.", "El Mapa de Riesgos solo sirve para formación inicial.", "La auditoría se aplica solo a áreas no clínicas."], "ok": 2, "e": "El Mapa de Riesgos identifica puntos vulnerables y la auditoría comprueba si se controlan adecuadamente y si los planes de mejora funcionan."},
+    {"t": 2, "q": "¿Cuál es el objetivo principal de un Plan de Auditorías en una organización sanitaria?", "o": ["Evitar la acreditación externa.", "Planificar revisiones para priorizar procesos críticos y fomentar la mejora continua.", "Cubrir vacantes de personal auditor.", "Elaborar estadísticas para redes sociales.", "Suplir la normativa vigente."], "ok": 1, "e": "Un plan bien diseñado organiza revisiones con criterios claros para priorizar procesos clave, alinearse con objetivos estratégicos y garantizar la mejora continua."},
+    {"t": 2, "q": "¿Qué significa definir el alcance de un Plan de Auditorías?", "o": ["Determinar el presupuesto de la unidad de calidad.", "Delimitar qué procesos o áreas se van a auditar y hasta dónde llega la revisión.", "Contratar auditores externos.", "Aumentar el volumen de trabajo sin orden.", "Repetir auditorías innecesarias."], "ok": 1, "e": "El alcance define qué se revisa y qué no, priorizando procesos críticos para usar recursos de forma eficaz."},
+    {"t": 2, "q": "¿Qué criterios pueden servir de referencia para realizar una auditoría interna?", "o": ["Solo normas internacionales.", "Exclusivamente la normativa legal estatal.", "Criterios internos y externos como protocolos, Estándares ACSA o ISO 9001.", "Opiniones personales del auditor.", "Encuestas de clima laboral."], "ok": 2, "e": "Los criterios deben ser claros, alineados con normativa y guías internas y externas, ajustados a cada proceso auditado."},
+    {"t": 2, "q": "¿Qué elemento NO es propio de un cronograma eficaz de auditorías?", "o": ["Fechas claras y escalonadas.", "Evitar solapamientos con periodos críticos.", "Concentrar todas las auditorías en el mismo mes.", "Incluir auditorías de seguimiento.", "Considerar la criticidad de los procesos."], "ok": 2, "e": "Concentrar todas las auditorías en un mismo mes genera sobrecarga y reduce su eficacia; lo recomendable es distribuirlas."},
+    {"t": 2, "q": "¿Qué relación existe entre el Plan de Auditorías y el Mapa de Riesgos?", "o": ["Son herramientas independientes sin relación.", "El Plan de Auditorías actualiza el Mapa de Riesgos con nuevos hallazgos y prioridades.", "El Mapa de Riesgos solo se usa en auditorías externas.", "El Plan de Auditorías sustituye la necesidad del Mapa de Riesgos.", "No es relevante para el ciclo PDCA."], "ok": 1, "e": "El Mapa de Riesgos y el Plan de Auditorías se retroalimentan: los riesgos detectados orientan auditorías y los hallazgos actualizan el mapa."},
+    {"t": 3, "q": "¿Qué es un indicador clave de rendimiento (KPI) en auditoría sanitaria?", "o": ["Un dato aislado sin relación con estándares.", "Una métrica específica y relevante para evaluar la eficacia de un proceso.", "Un formulario de recursos humanos.", "Una encuesta de satisfacción anual.", "Una tarea exclusivamente administrativa."], "ok": 1, "e": "Un KPI permite medir si los procesos se desarrollan como se espera, relacionando datos con objetivos y estándares definidos."},
+    {"t": 3, "q": "¿Cuál de estos elementos NO forma parte de las características SMART de un buen indicador?", "o": ["Específico.", "Medible.", "Ambiguo.", "Alcanzable.", "Temporal."], "ok": 2, "e": "Un buen indicador debe ser Específico, Medible, Alcanzable, Relevante y Temporal. La ambigüedad se evita."},
+    {"t": 3, "q": "¿Qué tipo de indicador evalúa cómo se realizan las actividades dentro de un proceso?", "o": ["Indicador de estructura.", "Indicador de resultado.", "Indicador financiero.", "Indicador de proceso.", "Indicador de marketing."], "ok": 3, "e": "Los indicadores de proceso analizan cómo se llevan a cabo las actividades, su correcta implantación y seguimiento."},
+    {"t": 3, "q": "¿Qué ventaja aporta definir bien los indicadores antes de implantarlos?", "o": ["Reduce la fiabilidad de los datos.", "Facilita la interpretación homogénea y mejora la toma de decisiones.", "Sustituye la necesidad de auditorías de seguimiento.", "Genera sobrecarga administrativa sin beneficio.", "Evita la participación de los equipos."], "ok": 1, "e": "Una definición clara asegura que todos comprendan qué se mide, cómo se mide y para qué, favoreciendo el aprendizaje y la mejora."},
+    {"t": 3, "q": "¿Qué relación tienen los indicadores con el Mapa de Riesgos y el ciclo PDCA?", "o": ["No existe relación alguna.", "Los indicadores sustituyen al Mapa de Riesgos.", "Los indicadores monitorizan los riesgos priorizados y alimentan la mejora continua.", "Solo se usan en procesos administrativos.", "Se aplican solo a indicadores de estructura."], "ok": 2, "e": "Los indicadores se diseñan alineados con los riesgos identificados, monitorizan su evolución y alimentan el ciclo PDCA para cerrar el proceso de mejora."},
+    {"t": 4, "q": "¿Qué se entiende por “evidencia” en el contexto de una auditoría?", "o": ["Una opinión personal del auditor.", "Una percepción subjetiva de los resultados.", "Registros, hechos o información verificable que respalda conclusiones.", "Un rumor sin documentación.", "Una hipótesis sin soporte documental."], "ok": 2, "e": "Según ISO 19011, la evidencia son registros, declaraciones de hechos u otra información pertinente y verificable que sustenta los hallazgos."},
+    {"t": 4, "q": "¿Qué tipo de evidencia NO se considera adecuado para sustentar un hallazgo de auditoría?", "o": ["Registro documental actualizado.", "Observación directa de un proceso.", "Opinión sin soporte.", "Entrevista estructurada.", "Datos de sistemas de información."], "ok": 2, "e": "En auditoría se exige objetividad; una opinión sin base verificable carece de valor como evidencia."},
+    {"t": 4, "q": "¿Qué instrumento es más adecuado para verificar punto por punto el cumplimiento de un protocolo?", "o": ["Una lista de verificación (checklist).", "Un gráfico de barras.", "Un manual de bienvenida.", "Una hoja de incidencias económicas.", "Un correo electrónico sin firmar."], "ok": 0, "e": "El checklist detalla los elementos a comprobar, asegurando que nada importante quede fuera."},
+    {"t": 4, "q": "¿Qué principio debe respetarse siempre al recolectar evidencias en auditoría?", "o": ["Registrar solo lo que confirme hipótesis previas.", "Guardar los hallazgos sin compartirlos con nadie.", "Trazabilidad, pertinencia y confidencialidad de la información.", "Delegar toda la recolección en personal ajeno al proceso.", "Omitir información para reducir el volumen de datos."], "ok": 2, "e": "La recolección debe ser objetiva, trazable y confidencial, garantizando fiabilidad y confianza en los resultados."},
+    {"t": 4, "q": "¿Qué relación tiene la recolección de evidencias con el ciclo PDCA?", "o": ["Es independiente y no se vincula con ninguna fase.", "Solo se relaciona con la fase de planificación.", "Está integrada en todas las fases, sustentando hallazgos y acciones de mejora.", "Se usa solo para justificar gastos.", "Sustituye la necesidad de auditoría de seguimiento."], "ok": 2, "e": "Las evidencias alimentan cada fase del ciclo PDCA: Planificar, Hacer, Verificar y Actuar, cerrando el bucle de mejora."},
+    {"t": 5, "q": "¿Qué función principal cumple el informe de auditoría?", "o": ["Guardar la información en archivo sin difundirla.", "Proporcionar información objetiva, interpretada y útil para la mejora.", "Justificar gastos presupuestarios.", "Sustituir la planificación de auditorías futuras.", "Divulgar datos confidenciales públicamente."], "ok": 1, "e": "El informe comunica hallazgos, los interpreta y plantea recomendaciones prácticas para la toma de decisiones y la mejora continua."},
+    {"t": 5, "q": "¿Cuál NO es un requisito clave de un buen informe de auditoría?", "o": ["Claridad en la redacción.", "Objetividad basada en evidencias.", "Coherencia con datos e indicadores.", "Utilidad práctica para la acción.", "Opiniones subjetivas sin respaldo."], "ok": 4, "e": "Las opiniones sin evidencias verificables no cumplen con la objetividad exigida en auditoría."},
+    {"t": 5, "q": "¿Qué apartado NO suele formar parte de la estructura básica de un informe de auditoría?", "o": ["Portada y datos identificativos.", "Metodología aplicada.", "Análisis financiero de la empresa.", "Hallazgos y evidencias.", "Conclusiones y recomendaciones."], "ok": 2, "e": "El análisis financiero no forma parte del informe de auditoría clínica salvo que sea objeto de la auditoría. El resto son apartados habituales."},
+    {"t": 5, "q": "¿Qué aspecto es fundamental al interpretar datos en un informe de auditoría?", "o": ["Sacar conclusiones precipitadas sin validación.", "Relacionar los datos con objetivos y criterios establecidos.", "Evitar analizar tendencias para ahorrar tiempo.", "Basarse solo en percepciones personales.", "Omitir datos que contradicen hipótesis iniciales."], "ok": 1, "e": "Relacionar datos con estándares y objetivos permite evaluar desviaciones y planificar mejoras de forma coherente."},
+    {"t": 5, "q": "¿Qué buena práctica refuerza la utilidad del informe de auditoría?", "o": ["Guardarlo en archivo sin compartirlo.", "Validar borradores con responsables del área auditada.", "Presentarlo solo a la dirección sin implicar al equipo.", "Publicarlo en redes sociales sin autorización.", "Elaborarlo sin principios éticos ni confidencialidad."], "ok": 1, "e": "Revisar y validar el informe con los responsables fomenta la transparencia, la comprensión y la aceptación de resultados y mejoras."},
+    {"t": 6, "q": "¿Qué finalidad tiene planificar mejoras tras una auditoría?", "o": ["Archivar los hallazgos sin actuar.", "Elaborar informes sin seguimiento.", "Traducir hallazgos en acciones prácticas, responsables y medibles.", "Justificar presupuestos de calidad.", "Evitar nuevas auditorías de seguimiento."], "ok": 2, "e": "El objetivo es garantizar que los hallazgos se conviertan en mejoras reales con responsables, plazos y recursos definidos."},
+    {"t": 6, "q": "¿Qué elemento NO forma parte básica de un plan de acciones de mejora?", "o": ["Objetivos claros.", "Acciones propuestas.", "Cronograma y responsables.", "Indicadores de seguimiento.", "Publicidad en redes sociales."], "ok": 4, "e": "Publicitar en redes sociales no forma parte del plan de acciones; los elementos clave son objetivos, acciones, responsables, cronograma e indicadores."},
+    {"t": 6, "q": "¿Cuál es la finalidad principal de la auditoría de seguimiento?", "o": ["Identificar nuevos hallazgos sin cerrar los anteriores.", "Validar la eficacia de las acciones correctoras implantadas.", "Sustituir el ciclo PDCA.", "Evitar la actualización del Mapa de Riesgos.", "Elaborar encuestas de satisfacción."], "ok": 1, "e": "La auditoría de seguimiento verifica si las acciones se ejecutaron bien, si los resultados se alcanzaron y si quedan riesgos abiertos."},
+    {"t": 6, "q": "¿Qué factor favorece el éxito de un plan de mejora?", "o": ["Falta de seguimiento real.", "Resistencia al cambio.", "Compromiso de la dirección y comunicación transparente.", "Sobrecarga de tareas sin recursos.", "Comunicación ineficaz."], "ok": 2, "e": "El compromiso directivo y la buena comunicación son claves para legitimar recursos, motivar equipos y consolidar cambios."},
+    {"t": 6, "q": "¿Qué principio ético refuerza la cultura de seguridad en auditorías de seguimiento?", "o": ["Enfoque punitivo.", "Búsqueda de responsables individuales.", "Análisis como oportunidad de aprendizaje y mejora continua.", "Divulgación de datos sin confidencialidad.", "Ocultar hallazgos negativos."], "ok": 2, "e": "El enfoque no punitivo convierte los hallazgos en oportunidades de aprendizaje, reforzando la confianza y la cultura de seguridad."}
+  ];
+
+  const API = { TEMAS, GLOSARIO, EJEMPLOS, TEST };
   if (typeof module !== "undefined" && module.exports) module.exports = API; else raiz.Contenido = API;
 })(typeof window !== "undefined" ? window : globalThis);

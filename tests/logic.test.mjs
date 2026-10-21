@@ -308,5 +308,28 @@ const dInf = L.documentoInforme(ejI, C.EJEMPLOS.mapas[0], null, "x"), dRes = L.d
 t("Word del informe", new TextDecoder().decode(D.construirDocx(dInf)).includes("Causa raíz"));
 t("Word del resumen ejecutivo", new TextDecoder().decode(D.construirDocx(dRes)).includes("Recomendaciones prioritarias"));
 
+
+// Mejora y seguimiento
+const [ejO, ejS] = C.EJEMPLOS.auditorias;
+eq("Comparación antes/después del ejemplo", L.compararSeguimiento(ejO, ejS).map(f => f.decision), ["cerrar", "parcial", "cerrar"]);
+eq("Ejemplo: plan de mejora sin avisos graves", L.avisosMejora(ejO, "2026-10-21").filter(a => a.nivel !== "nota").map(a => a.texto), []);
+t("Ejemplo: plan de mejora completo", Object.values(L.progresoMejora(ejO)).every(Boolean));
+eq("Ejemplo seguimiento: sin avisos graves", [...L.avisosInforme(ejS), ...L.avisosDiseno(ejS), ...L.avisosMejora(ejS, "2026-10-21")].filter(a => a.nivel !== "nota").map(a => a.texto), []);
+eq("Zonas de la matriz", [["3", "3"], ["3", "2"], ["3", "1"], ["2", "2"], ["1", "3"], ["1", "1"]].map(([c, v]) => L.zonaAccion({ criticidad: c, viabilidad: v }).k), ["ya", "ya", "planificar", "pronto", "pronto", "reconsiderar"]);
+t("Vencida", L.vencida({ fin: "2026-01-01", estado: "curso" }, "2026-02-01") && !L.vencida({ fin: "2026-01-01", estado: "hecha" }, "2026-02-01"));
+const audM = JSON.parse(JSON.stringify(ejO)); audM.mejora.acciones = [];
+const traidas = L.accionesDesdeRecs(audM, gid);
+eq("Acciones desde recomendaciones", [traidas.length, traidas[0].criticidad, /^Reducir el % de discrepancias/.test(traidas[0].objetivo)], [20, "3", true]);
+audM.mejora.acciones = traidas;
+eq("No duplica al volver a traer", L.accionesDesdeRecs(audM, gid).length, 0);
+const nuevaS = L.crearSeguimiento(ejO, gid, "f", true);
+eq("Seguimiento: criterios con hallazgo o acciones", nuevaS.criterios.length, 10);
+t("Seguimiento: hereda diseño y empieza limpio", nuevaS.criterios.every(c => c.origenId && c.ind.nombre && !c.recogida.casos.length && !c.analisis.clasif && !c.muestra.sorteo.length) && nuevaS.seguimientoDe === ejO.id && nuevaS.origen.tipo === "seguimiento");
+t("Comparación con seguimiento vacío: pendiente", L.compararSeguimiento(ejO, nuevaS).every(f => f.decision === "pendiente"));
+const dPM = L.documentoPlanMejora(ejO, "x", "2026-10-21");
+t("Word del plan de mejora", new TextDecoder().decode(D.construirDocx(dPM)).includes("Matriz criticidad"));
+t("Informe del seguimiento con comparación", new TextDecoder().decode(D.construirDocx(L.documentoInforme(ejS, null, null, "x", ejO))).includes("Comparación con la auditoría inicial"));
+t("Excel del plan de mejora", X.construirLibroXlsx(L.hojasExcelMejora(ejO, "x", "2026-10-21")).length > 1000);
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);
