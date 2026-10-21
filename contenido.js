@@ -394,8 +394,64 @@
     evid: Object.assign({ tipos: [], triangulacion: "", principios: [], instrumentos: [], justificacion: "" }, evid),
     muestra: Object.assign({ objetivo: "decidir", N: "", e: "10", p: "50", beta: "20", umbral: "", n: "", metodo: "aleatorio", unidad: "", sorteo: [] }, muestra),
     piloto: { pares: pares.map(([a, b]) => ({ a, b })), nota: pares.length ? "Pilotaje con dos auditoras sobre historias de abril, antes de la recogida real." : "" },
-    recogida: recogida || { casos: [], evidencia: "", comentario: "", observaciones: "" }
+    recogida: recogida || { casos: [], evidencia: "", comentario: "", observaciones: "" },
+    analisis: { clasif: "", interpretacion: "", porques: ["", "", "", "", ""], categorias: [], causaRaiz: "", recs: [] }
   });
+  // Análisis de cada criterio: interpretación, causas y recomendaciones (las del informe del caso)
+  const an = (clasif, interpretacion, porques, categorias, causaRaiz, recs) => ({ clasif, interpretacion, porques: [...porques, "", "", "", "", ""].slice(0, 5), categorias, causaRaiz,
+    recs: recs.map(([texto, responsable, prioridad, motivo], k) => ({ id: "r" + k, texto, responsable, prioridad, motivo, plazo: "" })) });
+  const ANALISIS_URG = {
+    c1: an("observacion", "2 discrepancias en 10 casos (20 %) frente a un máximo del 10 %. El LQAS acepta (8 de 10 sin discrepancia; hacían falta 7): no hay evidencia suficiente de incumplimiento, pero el valor observado y el margen (±25 puntos) aconsejan vigilarlo con una muestra mayor.",
+      ["La prioridad asignada en triaje no coincide con la de la supervisión clínica", "No se valoraron algunas constantes alteradas", "La clasificación se hace con prisa en los momentos de saturación", "No hay doble validación en los casos dudosos"], ["personas", "procedimiento", "entorno"],
+      "Subestimación de signos vitales alterados en situaciones de presión asistencial, sin un mecanismo de doble validación en los casos dudosos.",
+      [["Reforzar la formación específica en triaje clínico estructurado para el personal de enfermería, asegurando la correcta aplicación de los criterios de priorización.", "Supervisión de Enfermería de Urgencias", "alta", "Afecta directamente a la seguridad clínica y a los tiempos críticos de atención."],
+       ["Establecer auditorías trimestrales de revisión cruzada de los triajes, para identificar patrones de error y ofrecer retroalimentación formativa.", "Responsable de Calidad", "media", "Mejora progresiva sin impacto inmediato sobre el riesgo."]]),
+    c2: an("observacion", "16 de 20 historias con los antecedentes visibles en admisión (80 %) frente al 90 %. El LQAS acepta (16 ≥ 15): no se puede afirmar el incumplimiento con ±18 puntos de margen, pero conviene vigilarlo. En los casos que no cumplen, los antecedentes estaban registrados en otros apartados de la historia.",
+      ["Los antecedentes no se ven en el campo de admisión", "Están registrados en otros apartados de la historia", "El módulo de admisión no tiene un campo visible obligatorio", "La historia está fragmentada entre aplicaciones"], ["sistemas", "procedimiento"],
+      "Historia clínica fragmentada y sin un campo visible y obligatorio para los antecedentes relevantes en el módulo de admisión.",
+      [["Solicitar al servicio TIC la creación de un campo obligatorio y visible en el módulo de admisión para consignar los antecedentes clínicos relevantes.", "Coordinador/a de Sistemas de Información", "alta", "Cambio estructural con efecto directo en el acceso a información clínica crítica."],
+       ["Realizar sesiones de sensibilización al personal administrativo sobre el registro riguroso de los antecedentes clínicos en admisión.", "Jefe/a de Sección de Admisión", "media", "Requiere cambio de hábitos; impacto gradual."]]),
+    c3: an("noConformidad", "En los 10 primeros casos, 6 tienen reevaluación registrada (hacían falta 7): el LQAS rechaza. Hay evidencia de que no se alcanza el estándar del 90 % de reevaluación en esperas superiores a 60 minutos.",
+      ["Pacientes con más de 60 minutos de espera sin reevaluación registrada", "La reevaluación de la sala de espera no está asignada a un profesional concreto", "El protocolo no fija la periodicidad ni quién la hace", "En los momentos de saturación se prioriza el triaje de los que llegan", "No hay ninguna alerta que avise de que se ha superado el tiempo"], ["organizacion", "procedimiento", "sistemas"],
+      "No existe un circuito de vigilancia activa de la sala de espera: la reevaluación no está asignada ni hay alertas de tiempo, y se pierde en los momentos de saturación.",
+      [["Implantar un sistema de alertas automáticas en el módulo informático de Urgencias que avise a Enfermería cuando un paciente supere el tiempo de espera permitido.", "Supervisor/a de Enfermería del Área de Urgencias", "alta", "Permite actuar de forma inmediata y garantizar la reevaluación."],
+       ["Incorporar al protocolo de triaje una revisión sistemática cada 60 minutos de los pacientes en espera, con un responsable asignado por turno.", "Coordinador/a Médico de Urgencias", "media", "Facilita la actualización periódica del estado clínico."]]),
+    c4: an("observacion", "8 de 10 pacientes con la medicación habitual registrada antes de la prescripción (80 %) frente al 90 %. El LQAS acepta (8 ≥ 7): no hay evidencia suficiente de incumplimiento, aunque el margen es amplio (±25 puntos).",
+      ["La medicación habitual no se registra antes de prescribir", "El módulo de prescripción permite prescribir sin ella", "Falta de tiempo en la valoración inicial"], ["sistemas", "personas"],
+      "El sistema de prescripción no exige registrar la medicación habitual antes de la primera prescripción y la valoración inicial se hace con presión de tiempo.",
+      [["Añadir un campo obligatorio en el módulo de prescripción electrónica que exija registrar la medicación habitual antes de permitir la prescripción urgente.", "Coordinador/a de Farmacia Hospitalaria", "alta", "Verificación estructural del dato clave."],
+       ["Ofrecer una formación breve y práctica al personal médico sobre la conciliación de la medicación al ingreso.", "Jefe/a de Servicio de Urgencias", "media", "Intervención de bajo coste que refuerza la sensibilización."]]),
+    c5: an("observacion", "15 de 20 pacientes de 75 años o más con la escala de fragilidad registrada (75 %) frente al 80 %. En los 19 primeros, 14 (hacían falta 12): el LQAS acepta. No se puede afirmar el incumplimiento, pero la herramienta no se aplica de forma sistemática.",
+      ["No se registra la escala de fragilidad en todos los mayores de 75 años", "La escala no está integrada en el registro de triaje", "Parte del personal no conoce la herramienta"], ["procedimiento", "sistemas", "personas"],
+      "Falta de un cribado geriátrico sistemático integrado en el registro de triaje.",
+      [["Implantar un protocolo obligatorio de detección de fragilidad en mayores de 75 años durante el triaje, incorporando la herramienta al registro digital.", "Coordinación de Enfermería de Urgencias", "alta", "Impacto inmediato en la identificación de pacientes vulnerables."],
+       ["Formar al personal de triaje en herramientas de cribado de fragilidad (FRAIL o similar) mediante sesiones clínicas prácticas.", "Unidad de Formación Continuada", "media", "Refuerza las competencias necesarias para consolidar el cambio."]]),
+    c6: an("noConformidad", "6 de 10 resultados críticos comunicados en menos de 60 minutos (hacían falta 7): el LQAS rechaza. Hay evidencia de que no se alcanza el estándar del 90 %; la demora puede retrasar decisiones clínicas urgentes.",
+      ["Los resultados críticos se comunican con más de 60 minutos de demora", "El laboratorio no localiza con rapidez al responsable clínico", "No hay un listado actualizado de responsables de guardia por turno", "El sistema no lanza una alerta con confirmación de lectura"], ["comunicacion", "sistemas", "organizacion"],
+      "Circuito de comunicación de resultados críticos sin alerta automática ni responsable claramente identificado en cada turno.",
+      [["Definir un circuito de alerta automática para resultados críticos en el sistema informático, con trazabilidad de la recepción por el responsable clínico.", "Servicio de Informática Clínica", "alta", "Previene demoras críticas en la atención."],
+       ["Establecer un listado actualizado de responsables clínicos de guardia, accesible por turnos, para la comunicación directa de resultados relevantes.", "Jefatura de Servicio Médico de Urgencias", "media", "Mejora organizativa clave para una comunicación eficaz."]]),
+    c7: an("observacion", "5 de 10 ingresos esperaron más de 6 horas (50 %) frente a un máximo del 20 %. El LQAS acepta (5 ≥ 5), pero la línea roja es muy baja (45 %) y con 10 casos la muestra es insuficiente para afirmar o negar el problema. Se recomienda repetir la medición con 29 ingresos.",
+      ["Demoras de más de 6 horas en ocupar cama", "La disponibilidad de camas no se conoce en tiempo real", "Saturación hospitalaria y falta de planificación anticipada"], ["organizacion", "sistemas"],
+      "Saturación hospitalaria y falta de un sistema compartido y en tiempo real de disponibilidad de camas.",
+      [["Establecer un sistema de alerta automatizada que notifique a Urgencias la disponibilidad de camas libres en planta.", "Supervisión de Enfermería de Urgencias", "alta", "Reduce los tiempos de espera mediante notificación inmediata."],
+       ["Coordinar una reunión semanal con los responsables de hospitalización para revisar los bloqueos estructurales en la asignación de camas.", "Subdirección Médica", "media", "Mejora progresiva del flujo sin cambios tecnológicos inmediatos."]]),
+    c8: an("observacion", "4 de 20 incidentes en pacientes sin acompañamiento documentado (20 %) frente a un máximo del 15 %. En los 16 primeros, 12 con acompañamiento (hacían falta 11): el LQAS acepta. Riesgo a vigilar en población vulnerable.",
+      ["Incidentes en pacientes vulnerables sin acompañamiento", "No consta si el paciente necesita acompañamiento", "Recursos humanos limitados en la sala de espera"], ["organizacion", "entorno"],
+      "Recursos limitados en la sala de espera y paciente frágil sin una alerta de riesgo que active el acompañamiento.",
+      [["Implantar un protocolo obligatorio de acompañamiento para los pacientes con deterioro cognitivo o dependencia funcional.", "Coordinación de Enfermería de Urgencias", "alta", "Actúa directamente sobre la causa de los incidentes."],
+       ["Incorporar un campo obligatorio en el registro de triaje que indique si el paciente necesita acompañamiento y si está garantizado.", "Equipo de Sistemas de Información Clínicos", "media", "Mejora la trazabilidad y facilita las auditorías futuras."]]),
+    c9: an("observacion", "15 de 20 pacientes frágiles con el protocolo activado (75 %) frente al 80 %. En los 19 primeros, 14 (hacían falta 12): el LQAS acepta. El 75 % observado no permite afirmar el incumplimiento.",
+      ["El protocolo de paciente frágil no se activa en todos los casos", "En admisión no hay un procedimiento claro para activarlo", "Desconocimiento del riesgo en el primer contacto"], ["procedimiento", "personas"],
+      "Ausencia de un procedimiento operativo claro para detectar y activar el protocolo de paciente frágil desde admisión.",
+      [["Elaborar y difundir un procedimiento operativo para detectar y activar el protocolo de paciente frágil en admisión.", "Dirección de Enfermería", "alta", "Impacto potencial en la seguridad desde el primer contacto."],
+       ["Formar al personal administrativo y de enfermería de admisión en la identificación precoz y la derivación de pacientes frágiles.", "Coordinación de la Unidad de Formación", "media", "Implantación progresiva; consolida la sensibilización."]]),
+    c10: an("observacion", "18 de 20 pacientes con pulsera (90 %) frente al 95 %. En los 14 primeros, 13 (hacían falta 11): el LQAS acepta. Margen ±13 (77 %–100 %): no se puede afirmar que estemos por debajo del estándar. Los dos casos sin pulsera se relacionan con su retirada durante procedimientos.",
+      ["Pacientes sin pulsera al pasar a box o a pruebas", "La pulsera se retira durante algunos procedimientos (canalización de vías)", "Tras el procedimiento no se recoloca", "El software de triaje no exige registrar la colocación"], ["procedimiento", "sistemas"],
+      "La pulsera se retira durante algunos procedimientos y no hay un punto de control que obligue a comprobarla antes del paso a box o a pruebas.",
+      [["Establecer un punto de control obligatorio en el software de triaje que no permita continuar sin registrar la colocación de la pulsera identificativa.", "Departamento de Sistemas", "alta", "Asegura un cumplimiento sistemático y sin omisiones."],
+       ["Implantar una revisión semanal de las incidencias relacionadas con la falta de pulsera mediante una auditoría rápida.", "Supervisión de Enfermería", "media", "Detecta desviaciones o fallos persistentes."]])
+  };
   const ev = (tipos, triangulacion, principios, instrumentos, justificacion) => ({ tipos, triangulacion, principios, instrumentos, justificacion });
   const AUD_URG = {
     id: "ej-aud-urg", titulo: "Auditoría interna del proceso de admisión en Urgencias", unidad: "Servicio de Urgencias", centro: "Hospital (ejemplo)",
@@ -422,7 +478,13 @@
       historial: [{ edicion: "00", fecha: "2025-09-01", cambio: "Documento inicial" }]
     },
     ejecucion: { inicio: "2025-09-22", fin: "2025-10-10", auditores: "Equipo auditor organizado en cinco grupos (A–E), dos criterios por grupo.", incidencias: "Hubo que definir en la primera sesión cómo seleccionar los casos al azar (listado numerado y sorteo) para que todos los grupos lo hicieran igual." },
-    hitos: { aprobacion: { hecho: true, fecha: "2025-09-08", nota: "Aprobada por la Gerencia junto con el Jefe de Servicio." }, comunicacion: { hecho: true, fecha: "2025-09-15", nota: "Sesión de servicio y correo al personal." }, validacion: { hecho: false, fecha: "", nota: "" }, devolucion: { hecho: false, fecha: "", nota: "" } },
+    informe: {
+      conclusiones: "La auditoría confirma dos no conformidades con evidencia suficiente: la reevaluación de los pacientes con esperas prolongadas y la comunicación a tiempo de los resultados críticos. Ambas se deben a fallos del circuito (falta de alertas y de responsables asignados), no a profesionales concretos. En otros ocho criterios el cumplimiento observado está por debajo del estándar, pero con el tamaño de muestra utilizado no puede afirmarse el incumplimiento: se clasifican como observaciones y se recomienda vigilarlos, en particular la demora de cama, que requiere una muestra mayor. Las recomendaciones de prioridad alta proponen, sobre todo, cambios en los sistemas (alertas, campos obligatorios, puntos de control), más eficaces que las medidas basadas solo en la formación.",
+      fortalezas: "Implicación multidisciplinar del equipo; registros electrónicos que permiten trazar los tiempos; cumplimiento elevado de la identificación con pulsera (18 de 20) y de la conciliación de la medicación (8 de 10).",
+      resumen: "Se ha auditado el proceso de admisión en Urgencias hasta la decisión de ingreso (mayo de 2025) con 10 criterios en 7 subprocesos. Resultado: 2 no conformidades —reevaluación de los pacientes con esperas superiores a 60 minutos y comunicación de resultados críticos en menos de 60 minutos— y 8 observaciones en las que el cumplimiento está por debajo del estándar sin evidencia suficiente para afirmar el incumplimiento. Recomendaciones prioritarias: alertas automáticas de tiempo de espera y de resultados críticos, y campos obligatorios en admisión, prescripción y triaje. Se propone acordar el plan de mejora en la reunión de devolución y repetir la auditoría a los tres meses.",
+      destinatarios: "Gerencia, Dirección Médica y de Enfermería, y Jefatura del Servicio de Urgencias", estado: "validado"
+    },
+    hitos: { aprobacion: { hecho: true, fecha: "2025-09-08", nota: "Aprobada por la Gerencia junto con el Jefe de Servicio." }, comunicacion: { hecho: true, fecha: "2025-09-15", nota: "Sesión de servicio y correo al personal." }, validacion: { hecho: true, fecha: "2025-10-24", nota: "Borrador revisado con la Jefatura y la Supervisión de Urgencias." }, devolucion: { hecho: false, fecha: "", nota: "" } },
     criterios: [
       c("c1", TRI, "u8", "Clasificación errónea del nivel de prioridad", "El nivel de prioridad asignado en triaje coincide con el reevaluado por la supervisión clínica.",
         { nombre: "% de discrepancias entre el nivel de prioridad asignado en triaje y el reevaluado por la supervisión clínica", numerador: "Casos con discrepancia de prioridad", denominador: "Casos revisados", sentido: "menos", estandar: "10", fuente: "Hoja de triaje e historia clínica", cumpleSi: "Cumple (sin discrepancia) si el nivel de prioridad asignado en triaje coincide con el que asigna la supervisión clínica al revisar el caso con los mismos datos.", noAplicaSi: "Pacientes que no pasaron por triaje (traslado directo a reanimación)." },
@@ -512,6 +574,8 @@
     },
     creado: "2026-01-12T09:00:00.000Z", modificado: "2026-01-12T09:00:00.000Z"
   };
+
+  AUD_URG.criterios.forEach(cr => { if (ANALISIS_URG[cr.id]) cr.analisis = ANALISIS_URG[cr.id]; });
 
   // Minicaso inventado (a partir del minicaso de planificación): Hospitalización Médica
   const SUB_HOS = ["Ingreso", "Prescripción y administración", "Aislamiento", "Cuidados de enfermería"];

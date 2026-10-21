@@ -1032,3 +1032,27 @@ body.ver-informe .doc-salto { border: 0; margin: 0; break-after: page; }
   .res-movil { display: block; }
 }
 @media (max-width: 640px) { .res-sticky .rn { min-width: 44px; padding: 3px 6px; } }
+
+/* ============================================================
+   Entrega 5 · Informe: hallazgos, causas y recomendaciones
+   ============================================================ */
+.wiz-steps--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.cl-b { display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; border: 1px solid transparent; }
+.cl-b--conformidad { background: var(--green-dim); color: var(--green); border-color: rgba(21,128,61,.35); }
+.cl-b--observacion { background: var(--amber-dim); color: var(--amber); border-color: rgba(180,83,9,.35); }
+.cl-b--noConformidad { background: var(--red-dim); color: var(--red); border-color: rgba(190,18,60,.35); }
+.crit .res-crit { box-shadow: none; margin: 4px 0 10px; }
+.porques { display: grid; gap: 6px; counter-reset: pq; }
+.porque { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: center; }
+.porque span { font-size: 12.5px; font-weight: 800; color: var(--pV); text-align: right; }
+.porque:first-child span { color: var(--red); }
+.porque .txt-in { width: 100%; min-width: 0; resize: none; padding: 8px 10px; border: 1.5px solid var(--border-lite); border-radius: 8px; background: var(--bg); color: var(--text-1); font: 14.5px var(--font); }
+.porque + .porque { margin-left: 10px; } .porque + .porque + .porque { margin-left: 20px; } .porque + .porque + .porque + .porque { margin-left: 30px; } .porque + .porque + .porque + .porque + .porque { margin-left: 40px; }
+@media (max-width: 520px) { .porque { grid-template-columns: minmax(0, 1fr); gap: 2px; } .porque span { text-align: left; } .porque + .porque, .porque + .porque + .porque, .porque + .porque + .porque + .porque, .porque + .porque + .porque + .porque + .porque { margin-left: 0; } }
+.rec { margin: 8px 0; padding: 10px 12px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--border); }
+.rec-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+.rec-cab .link-btn { margin-left: auto; font-size: 13px; }
+.rec > textarea.txt-in { width: 100%; margin-bottom: 6px; }
+.fz-b { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.fz-b--fuerte { background: var(--green-dim); color: var(--green); } .fz-b--intermedia { background: var(--pP-dim); color: var(--pP); } .fz-b--debil { background: var(--amber-dim); color: var(--amber); }
+.seg--doc { margin: 8px 0; }

@@ -159,14 +159,14 @@
     return { id, subproceso: "", fallo: "", efecto: "", causa: "", g: "", o: "", d: "", medidas: "", clave: false, accion: "", evidencia: "", motivo: "" };
   }
   function nuevoCriterio(id) {
-    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "", ind: nuevoInd(), evid: nuevaEvid(), muestra: nuevaMuestra(), piloto: nuevoPiloto(), recogida: nuevaRecogida() };
+    return { id, subproceso: "", riesgoId: "", hallazgo: "", criterio: "", ind: nuevoInd(), evid: nuevaEvid(), muestra: nuevaMuestra(), piloto: nuevoPiloto(), recogida: nuevaRecogida(), analisis: nuevoAnalisis() };
   }
   function nuevaAuditoria(id, fecha) {
     return {
       id, titulo: "", unidad: "", proceso: "", centro: "",
       origen: { tipo: "", mapaId: "", riesgoIds: [], detalle: "" },
       tipo: "interna", objeto: "proceso", introduccion: "", objetivoGeneral: "", objetivosEsp: "", alcance: "",
-      planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(), ejecucion: nuevaEjecucion(),
+      planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(), ejecucion: nuevaEjecucion(), informe: nuevoInforme(),
       criterios: [], creado: fecha, modificado: fecha
     };
   }
@@ -253,7 +253,9 @@
     if (sinPiloto) return { k: "pilotar", texto: `Antes de recoger datos en «${corto(sinPiloto.titulo || "tu auditoría", 50)}», pilota la hoja de recogida con dos auditores en 5–10 casos.`, href: `#/auditoria/${sinPiloto.id}/diseno/5`, btn: "Hacer el pilotaje" };
     const sinDatos = auds.find(a => { const p = progresoRecogida(a); return p.completos < p.total; });
     if (sinDatos) { const p = progresoRecogida(sinDatos); return { k: "recoger", texto: `Recoge los datos de «${corto(sinDatos.titulo || "tu auditoría", 50)}»: ${p.completos} de ${p.total} criterios tienen ya resultado.`, href: `#/auditoria/${sinDatos.id}/recogida`, btn: "Seguir con la recogida" }; }
-    return { k: "informe", texto: "Tienes los resultados de tus auditorías. El siguiente paso será interpretarlos, buscar las causas y redactar el informe, en la próxima versión. Mientras, descarga la matriz de resultados.", href: "#/auditorias", btn: "Ver mis auditorías" };
+    const sinInforme = auds.find(a => { const g = progresoInforme(a); return ![1, 2, 3, 4, 5].every(k => g[k]); });
+    if (sinInforme) { const g = progresoInforme(sinInforme), paso = [1, 2, 3, 4, 5].find(k => !g[k]); return { k: "informe", texto: `Redacta el informe de «${corto(sinInforme.titulo || "tu auditoría", 50)}»: te falta ${["", "interpretar y clasificar los hallazgos", "analizar las causas de las no conformidades", "proponer recomendaciones con responsable y prioridad", "las conclusiones y el resumen ejecutivo", "validar el borrador con los responsables"][paso]}.`, href: `#/auditoria/${sinInforme.id}/informe/${paso}`, btn: "Seguir con el informe" }; }
+    return { k: "mejora", texto: "Tus informes están listos. El siguiente paso será el plan de acción de mejora y la auditoría de seguimiento, en la próxima versión. Mientras, presenta el informe en la reunión de devolución.", href: "#/auditorias", btn: "Ver mis auditorías" };
   }
 
   // ---------- Diseño de la auditoría (entrega 3) ----------
@@ -920,6 +922,185 @@
     ] };
   }
 
+  // ---------- Informe: interpretación, causas, hallazgos y recomendaciones (entrega 5) ----------
+  const CLASIF = {
+    conformidad: { nom: "Conformidad", que: "Se cumple el criterio." },
+    observacion: { nom: "Observación", que: "No hay evidencia de incumplimiento, pero conviene vigilarlo o mejorarlo." },
+    noConformidad: { nom: "No conformidad", que: "No se cumple el criterio y hay evidencia que lo demuestra." }
+  };
+  const CATEGORIAS_CAUSA = {
+    personas: { nom: "Personas", que: "Formación, conocimiento del protocolo, carga de trabajo, cansancio." },
+    procedimiento: { nom: "Procedimiento", que: "Protocolo inexistente, ambiguo, desactualizado o poco práctico." },
+    sistemas: { nom: "Equipos y sistemas", que: "Sistema de información, alertas, campos, material, equipos." },
+    organizacion: { nom: "Organización", que: "Circuitos, recursos, turnos, coordinación entre unidades." },
+    comunicacion: { nom: "Comunicación", que: "Transmisión de información entre profesionales, turnos o unidades." },
+    entorno: { nom: "Paciente y entorno", que: "Complejidad del paciente, saturación, espacio físico." }
+  };
+  const PRIORIDADES = { alta: "Alta", media: "Media", baja: "Baja" };
+  const ESTADOS_INFORME = { borrador: "Borrador", validado: "Validado con los responsables", aprobado: "Aprobado" };
+  const nuevaRec = id => ({ id, texto: "", responsable: "", prioridad: "", motivo: "", plazo: "" });
+  const nuevoAnalisis = () => ({ clasif: "", interpretacion: "", porques: ["", "", "", "", ""], categorias: [], causaRaiz: "", recs: [] });
+  const nuevoInforme = () => ({ conclusiones: "", fortalezas: "", resumen: "", destinatarios: "", estado: "borrador" });
+
+  function clasificacionSugerida(c) {
+    const r = resultadoCriterio(c);
+    if (r.estado === "rojo") return "noConformidad";
+    if (r.estado === "ambar") return "observacion";
+    if (r.estado === "verde") return r.cumpleObservado === false ? "observacion" : "conformidad";
+    return "";
+  }
+  // Interpretación propuesta (como en el ejercicio de interpretación): qué significa frente al estándar y qué se puede afirmar
+  function interpretacionSugerida(c) {
+    const r = resultadoCriterio(c), ind = c.ind, est = pctNum(ind.estandar);
+    if (!r.n) return "";
+    const partes = [`Resultado: ${r.textoValor} frente a un estándar ${textoEstandar(ind)}.`];
+    if (Number.isFinite(est)) {
+      const dif = Math.abs(r.valor - est);
+      partes.push(r.cumpleObservado ? `El valor observado alcanza el estándar.` : `El valor observado se desvía ${nfmt(dif, 1)} puntos del estándar.`);
+    }
+    if (r.lqas && r.lqas.acepta != null) partes.push(r.lqas.acepta ? `Con el plan LQAS (n = ${r.lqas.n}, c = ${r.lqas.c}) se acepta: no hay evidencia suficiente de incumplimiento${r.cumpleObservado === false ? `, aunque con un margen de ±${nfmt(r.margen, 0)} puntos conviene vigilarlo` : ""}.` : `Con el plan LQAS (n = ${r.lqas.n}, c = ${r.lqas.c}) se rechaza: hay evidencia de que no se alcanza el estándar.`);
+    else if (r.estado === "ambar") partes.push(`Con ${r.n} casos el margen (±${nfmt(r.margen, 0)}) no permite afirmar ni descartar el incumplimiento.`);
+    const obs = c.recogida.casos.filter(x => x.valor === "no" && lleno(x.obs)).map(x => x.obs.trim());
+    if (obs.length) partes.push(`En los casos que no cumplen se anotó: ${[...new Set(obs)].slice(0, 4).join("; ").toLowerCase()}.`);
+    return partes.join(" ");
+  }
+
+  // Fuerza de una medida (jerarquía de efectividad): las que cambian el sistema funcionan mejor que las que dependen de la memoria o la voluntad
+  const FUERZAS = {
+    fuerte: { nom: "Medida fuerte", que: "Cambia el sistema: obliga, automatiza o elimina el paso que falla." },
+    intermedia: { nom: "Medida intermedia", que: "Apoya la práctica: listas de verificación, doble verificación, estandarizar." },
+    debil: { nom: "Medida débil", que: "Depende de la memoria o la voluntad: formación, avisos, sensibilización." }
+  };
+  function fuerzaMedida(texto) {
+    const t = sinTildes(texto);
+    if (!t) return "";
+    if (/campo obligatori|no permit|\bbloque(e|ar|a)\b|forzad|automat|alerta autom|integracion|interoperab|redisen|eliminar|simplific|panel de camas|en tiempo real|sistema de alerta/.test(t)) return "fuerte";
+    if (/checklist|lista de verificacion|doble (verificacion|validacion|identificacion)|protocolo|procedimiento|estandariz|auditori|revision (cruzada|semanal|periodica|sistematica)|recordatorio visual|listado actualizado|circuito|reunion|etiquetado|designacion/.test(t)) return "intermedia";
+    if (/formacion|\bformar\b|sesion|sensibiliz|concienci|charla|informar|difundir|recordar|insistir|cartel|cuidado|curso/.test(t)) return "debil";
+    return "";
+  }
+  // Redacción neutral: palabras que culpabilizan o que son subjetivas
+  const PALABRAS_NO_NEUTRAS = ["culpa", "negligen", "dejadez", "desidia", "vago", "incompeten", "irresponsab", "descuido", "pesim", "horrible", "lamentable", "vergonz", "desastr", "nunca", "siempre", "nadie", "todo el mundo", "obviamente", "evidentemente", "no se molesta", "pasan de"];
+  function palabrasNoNeutras(texto) {
+    const t = " " + sinTildes(texto).replace(/[^a-zñ ]/g, " ") + " ";
+    return PALABRAS_NO_NEUTRAS.filter(p => p.includes(" ") ? t.includes(" " + p + " ") : new RegExp(`\\b${p}`).test(t));
+  }
+  const RESP_VAGO = /^(todos|el equipo|equipo|personal|todo el personal|la unidad|el servicio|profesionales|enfermeria|direccion)$/;
+
+  const necesitaAnalisis = c => ["noConformidad", "observacion"].includes(c.analisis.clasif);
+  function avisosInforme(aud) {
+    const A = [], C = aud.criterios, nom = i => `Criterio ${i + 1}`;
+    C.forEach((c, i) => {
+      const an = c.analisis, r = resultadoCriterio(c), sug = clasificacionSugerida(c);
+      if (!r.n) A.push({ nivel: "nota", paso: 1, texto: `${nom(i)}: sin resultados todavía. Recoge los datos antes de interpretarlos.` });
+      if (!lleno(an.clasif) && r.n) A.push({ nivel: "nota", paso: 1, texto: `${nom(i)}: clasifica el hallazgo (conformidad, observación o no conformidad).` });
+      if (an.clasif === "conformidad" && r.estado === "rojo") A.push({ nivel: "warn", paso: 1, texto: `${nom(i)}: lo has clasificado como conformidad, pero el resultado se rechaza. Revisa la clasificación.` });
+      if (an.clasif === "noConformidad" && r.estado === "verde") A.push({ nivel: "warn", paso: 1, texto: `${nom(i)}: lo has clasificado como no conformidad, pero los datos no permiten afirmar el incumplimiento${r.cumpleObservado === false ? " (el porcentaje observado está por debajo, pero dentro del margen de error)" : ""}. Quizá sea una observación.` });
+      if (an.clasif === "noConformidad" && r.estado === "ambar") A.push({ nivel: "warn", paso: 1, texto: `${nom(i)}: el resultado no es concluyente; una no conformidad necesita evidencia. Valora clasificarlo como observación o ampliar la muestra.` });
+      if (lleno(an.clasif) && !lleno(an.interpretacion)) A.push({ nivel: "nota", paso: 1, texto: `${nom(i)}: escribe la interpretación (qué significa el resultado frente al estándar).` });
+      if (an.clasif === "noConformidad" && !lleno(an.causaRaiz)) A.push({ nivel: "warn", paso: 2, texto: `${nom(i)}: una no conformidad necesita análisis de causas antes de recomendar. Si no, la mejora ataca el síntoma.` });
+      if (an.clasif === "observacion" && !lleno(an.causaRaiz) && !an.categorias.length) A.push({ nivel: "nota", paso: 2, texto: `${nom(i)}: en las observaciones, una reflexión breve sobre las causas ayuda a orientar la mejora.` });
+      if (necesitaAnalisis(c)) {
+        const recs = an.recs.filter(x => lleno(x.texto));
+        if (!recs.length) A.push({ nivel: an.clasif === "noConformidad" ? "warn" : "nota", paso: 3, texto: `${nom(i)}: falta al menos una recomendación (lo habitual: dos por hallazgo).` });
+        recs.forEach((x, k) => {
+          if (!lleno(x.responsable)) A.push({ nivel: "nota", paso: 3, texto: `${nom(i)}, recomendación ${k + 1}: falta el responsable.` });
+          else if (RESP_VAGO.test(sinTildes(x.responsable))) A.push({ nivel: "warn", paso: 3, texto: `${nom(i)}, recomendación ${k + 1}: «${x.responsable}» no es un responsable concreto. Pon una persona o un cargo; si es de todos, no es de nadie.` });
+          if (!lleno(x.prioridad)) A.push({ nivel: "nota", paso: 3, texto: `${nom(i)}, recomendación ${k + 1}: asigna una prioridad.` });
+        });
+        if (recs.length && recs.every(x => fuerzaMedida(x.texto) === "debil")) A.push({ nivel: "warn", paso: 3, texto: `${nom(i)}: todas las recomendaciones son medidas débiles (formación, sensibilización, avisos). Suelen funcionar poco solas: añade alguna que cambie el sistema (un campo obligatorio, una alerta, una lista de verificación).` });
+      }
+      [["interpretación", an.interpretacion, 1], ["causa raíz", an.causaRaiz, 2], ...an.recs.map((x, k) => [`recomendación ${k + 1}`, x.texto, 3])].forEach(([q, txt, paso]) => {
+        const p = palabrasNoNeutras(txt); if (p.length) A.push({ nivel: "warn", paso, texto: `${nom(i)}, ${q}: revisa la redacción («${p.join("», «")}»). Describe hechos, sin juicios ni culpables.` });
+      });
+    });
+    const I = aud.informe;
+    [["conclusiones", I.conclusiones], ["resumen ejecutivo", I.resumen]].forEach(([q, txt]) => { const p = palabrasNoNeutras(txt); if (p.length) A.push({ nivel: "warn", paso: 4, texto: `En ${q}: revisa la redacción («${p.join("», «")}»).` }); });
+    if (!lleno(I.resumen)) A.push({ nivel: "nota", paso: 4, texto: "Falta el resumen ejecutivo para la Dirección (puedes pedir una propuesta)." });
+    if (!aud.hitos.validacion.hecho) A.push({ nivel: "nota", paso: 5, texto: "Valida el borrador con los responsables del área antes de cerrar el informe (hito de validación)." });
+    if (I.estado === "aprobado" && !aud.hitos.validacion.hecho) A.push({ nivel: "warn", paso: 5, texto: "El informe figura como aprobado, pero el borrador no se ha validado con los responsables." });
+    return A;
+  }
+  function progresoInforme(aud) {
+    const C = aud.criterios, todos = f => C.length > 0 && C.every(f), I = aud.informe;
+    return {
+      1: todos(c => lleno(c.analisis.clasif) && lleno(c.analisis.interpretacion)),
+      2: C.length > 0 && C.filter(c => c.analisis.clasif === "noConformidad").every(c => lleno(c.analisis.causaRaiz)) && todos(c => lleno(c.analisis.clasif)),
+      3: C.length > 0 && C.filter(necesitaAnalisis).every(c => c.analisis.recs.some(x => lleno(x.texto) && lleno(x.responsable) && lleno(x.prioridad))) && todos(c => lleno(c.analisis.clasif)),
+      4: lleno(I.resumen) && lleno(I.conclusiones),
+      5: aud.hitos.validacion.hecho && I.estado !== "borrador"
+    };
+  }
+  const cuentaClasif = aud => aud.criterios.reduce((o, c) => (c.analisis.clasif && (o[c.analisis.clasif] = (o[c.analisis.clasif] || 0) + 1), o), {});
+  function resumenEjecutivoSugerido(aud) {
+    const k = cuentaClasif(aud), C = aud.criterios, nc = C.filter(c => c.analisis.clasif === "noConformidad"), ob = C.filter(c => c.analisis.clasif === "observacion");
+    const recsAltas = C.flatMap(c => c.analisis.recs.filter(x => x.prioridad === "alta" && lleno(x.texto)));
+    const t = [];
+    t.push(`Se ha auditado ${lleno(aud.proceso) ? aud.proceso : "el proceso"}${lleno(aud.unidad) ? " en " + aud.unidad : ""}${lleno(aud.diseno.periodo) ? " (periodo: " + aud.diseno.periodo.charAt(0).toLowerCase() + aud.diseno.periodo.slice(1) + ")" : ""}, con ${C.length} ${C.length === 1 ? "criterio" : "criterios"}.`);
+    t.push(`Resultado: ${k.conformidad || 0} ${k.conformidad === 1 ? "conformidad" : "conformidades"}, ${k.observacion || 0} ${k.observacion === 1 ? "observación" : "observaciones"} y ${k.noConformidad || 0} ${k.noConformidad === 1 ? "no conformidad" : "no conformidades"}.`);
+    if (nc.length) t.push(`No conformidades: ${nc.map(c => `${c.subproceso ? c.subproceso.toLowerCase() + " (" : ""}${c.hallazgo.charAt(0).toLowerCase() + c.hallazgo.slice(1)}${c.subproceso ? ")" : ""}`).join("; ")}.`);
+    if (ob.length) t.push(`Además, ${ob.length} ${ob.length === 1 ? "criterio queda" : "criterios quedan"} por debajo del estándar sin evidencia suficiente para afirmar el incumplimiento: se recomienda vigilarlos.`);
+    if (recsAltas.length) t.push(`Recomendaciones de prioridad alta (${recsAltas.length}): ${recsAltas.slice(0, 4).map(x => x.texto.replace(/\.$/, "").charAt(0).toLowerCase() + x.texto.replace(/\.$/, "").slice(1)).join("; ")}${recsAltas.length > 4 ? "…" : ""}.`);
+    t.push("Se propone acordar el plan de mejora con responsables y plazos y programar una auditoría de seguimiento para comprobar su eficacia.");
+    return t.join(" ");
+  }
+
+  // Informe completo (estructura del tema 5 y del modelo de auditoría interna)
+  function documentoInforme(aud, mapa, plan, fecha) {
+    const C = aud.criterios, D = aud.diseno, I = aud.informe, k = cuentaClasif(aud), R = C.map(resultadoCriterio);
+    const B = [{ t: "portada", titulo: aud.titulo || "Informe de auditoría", sub: "Informe de auditoría", extra: [aud.unidad, aud.centro, lleno(D.periodo) ? "Periodo auditado: " + D.periodo : "", `Estado: ${ESTADOS_INFORME[I.estado]}`, "Fecha: " + fecha].filter(lleno) }];
+    B.push(...bloquesControl(aud.control), { t: "salto" });
+    const pe = documentoPlanEspecifico(aud, mapa, plan, fecha).bloques;
+    // Introducción, objetivos, alcance y criterios: los mismos del plan específico
+    const corta = (desde, hasta) => { const i = pe.findIndex(b => b.t === "h1" && b.texto.startsWith(desde)), j = pe.findIndex(b => b.t === "h1" && b.texto.startsWith(hasta)); return i < 0 ? [] : pe.slice(i, j < 0 ? undefined : j); };
+    B.push(...corta("1.", "4."));
+    B.push({ t: "h1", texto: "4. Criterios e indicadores" }, ...corta("4.", "5.").slice(1).filter(b => !(b.t === "h2" && b.texto.startsWith("4.3")) && !(b.t === "tabla" && b.cab && b.cab[1] === "Cumple si…")));
+    B.push({ t: "h1", texto: "5. Metodología" }, ...corta("5.", "6.").slice(1).filter(b => !(b.t === "h2" && b.texto.startsWith("5.2")) && !(b.t === "tabla" && b.cab && b.cab[1] === "Tipos de evidencia")));
+    if (lleno(aud.ejecucion.inicio)) B.push({ t: "p", texto: `Recogida de datos: ${fmtFecha(aud.ejecucion.inicio)}${lleno(aud.ejecucion.fin) ? " – " + fmtFecha(aud.ejecucion.fin) : ""}${lleno(aud.ejecucion.auditores) ? ". " + aud.ejecucion.auditores : ""}` });
+    if (lleno(aud.ejecucion.incidencias)) B.push({ t: "p", runs: [{ texto: "Incidencias del método: ", negrita: true }, { texto: aud.ejecucion.incidencias }] });
+    B.push({ t: "h1", texto: "6. Equipo auditor" });
+    if (lineas(D.equipo).length) B.push({ t: "lista", items: lineas(D.equipo) });
+    B.push({ t: "h1", texto: "7. Resultados y hallazgos" });
+    B.push({ t: "p", texto: `${C.length} criterios evaluados: ${k.conformidad || 0} conformidades, ${k.observacion || 0} observaciones y ${k.noConformidad || 0} no conformidades.` });
+    B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Subproceso", "Indicador", "Estándar", "Resultado", "Decisión", "Hallazgo"], anchos: [4, 14, 28, 9, 14, 13, 18], filas: C.map((c, i) => { const r = R[i]; return [{ texto: String(i + 1), centro: true }, c.subproceso, c.ind.nombre, { texto: textoEstandar(c.ind), centro: true }, { texto: r.n ? r.textoValor : "—", centro: true }, { texto: r.lqas && r.lqas.acepta != null ? (r.lqas.acepta ? "LQAS: acepta" : "LQAS: rechaza") : ESTADO_TXT[r.estado], centro: true, fondo: FONDO_ESTADO[r.estado] }, { texto: CLASIF[c.analisis.clasif] ? CLASIF[c.analisis.clasif].nom : "", negrita: true, fondo: c.analisis.clasif === "noConformidad" ? "FFE4E6" : c.analisis.clasif === "observacion" ? "FEF3C7" : c.analisis.clasif === "conformidad" ? "DCFCE7" : "" }]; }) });
+    const orden = ["noConformidad", "observacion", "conformidad", ""];
+    C.map((c, i) => ({ c, i })).sort((a, b) => orden.indexOf(a.c.analisis.clasif) - orden.indexOf(b.c.analisis.clasif) || a.i - b.i).forEach(({ c, i }) => {
+      const an = c.analisis, r = R[i], f = (kk, v) => lleno(v) ? [[{ texto: kk, negrita: true, fondo: "F1F5F9" }, v]] : [];
+      B.push({ t: "h2", texto: `Criterio ${i + 1} · ${c.subproceso || ""}${CLASIF[an.clasif] ? " — " + CLASIF[an.clasif].nom : ""}` });
+      const porques = an.porques.filter(lleno);
+      B.push({ t: "tabla", sinCab: true, anchos: [24, 76], filas: [...f("Hallazgo o riesgo", c.hallazgo), ...f("Criterio", c.criterio), ...f("Indicador", c.ind.nombre), ...f("Evidencia analizada", c.recogida.evidencia), ...f("Resultado", r.n ? `${r.textoValor}${Number.isFinite(r.margen) && c.muestra.objetivo !== "todos" ? ` (±${nfmt(r.margen, 0)})` : ""}${r.lqas && r.lqas.acepta != null ? `. LQAS (n = ${r.lqas.n}, c = ${r.lqas.c}): ${r.lqas.acepta ? "se acepta" : "se rechaza"}` : ""}` : ""), ...f("Interpretación", an.interpretacion), ...f("Por qué ocurre", porques.map((p, j) => `${j + 1}. ${p}`).join("\n")), ...f("Categorías de causa", an.categorias.map(x => CATEGORIAS_CAUSA[x].nom).join(", ")), ...f("Causa raíz", an.causaRaiz)] });
+    });
+    B.push({ t: "h1", texto: "8. Recomendaciones" });
+    const conRecs = C.map((c, i) => ({ c, i })).filter(x => x.c.analisis.recs.some(r => lleno(r.texto)));
+    if (!conRecs.length) B.push({ t: "p", texto: "Sin recomendaciones registradas." });
+    conRecs.forEach(({ c, i }) => {
+      B.push({ t: "h2", texto: `Criterio ${i + 1} · ${c.hallazgo}` });
+      B.push({ t: "tabla", fuente: 9, cab: ["Recomendación", "Responsable propuesto", "Prioridad", "Tipo de medida"], anchos: [50, 22, 14, 14], filas: c.analisis.recs.filter(r => lleno(r.texto)).map(r => [r.texto + (lleno(r.motivo) ? `\n(${r.motivo})` : ""), r.responsable, { texto: PRIORIDADES[r.prioridad] || "", centro: true, negrita: r.prioridad === "alta", fondo: r.prioridad === "alta" ? "FFE4E6" : r.prioridad === "media" ? "FEF3C7" : "" }, { texto: FUERZAS[fuerzaMedida(r.texto)] ? FUERZAS[fuerzaMedida(r.texto)].nom.replace("Medida ", "") : "", centro: true }]) });
+    });
+    B.push({ t: "h1", texto: "9. Conclusiones" });
+    if (lleno(I.fortalezas)) { B.push({ t: "p", runs: [{ texto: "Fortalezas. ", negrita: true }, { texto: I.fortalezas }] }); }
+    B.push({ t: "p", texto: lleno(I.conclusiones) ? I.conclusiones : resumenEjecutivoSugerido(aud) });
+    B.push({ t: "h1", texto: "10. Próximos pasos" });
+    B.push({ t: "p", texto: "Las recomendaciones se concretarán en un plan de acción de mejora con responsables, plazos, recursos e indicadores de seguimiento. Se programará una auditoría de seguimiento para comprobar la eficacia de las acciones y, si procede, se actualizará el Mapa de Riesgos." });
+    B.push({ t: "h1", texto: "Anexo. Hitos de la auditoría" });
+    B.push({ t: "tabla", cab: ["Hito", "Fecha", "Estado", "Nota"], anchos: [36, 14, 14, 36], filas: HITOS.map(h => { const v = aud.hitos[h.k]; return [h.nom, fmtFecha(v.fecha), { texto: v.hecho ? "Hecho" : "Pendiente", fondo: v.hecho ? "DCFCE7" : "" }, v.nota]; }) });
+    return { titulo: "Informe de auditoría · " + (aud.titulo || ""), bloques: B };
+  }
+  // Resumen ejecutivo para la Dirección: una o dos páginas
+  function documentoResumenEjecutivo(aud, fecha) {
+    const C = aud.criterios, R = C.map(resultadoCriterio), I = aud.informe;
+    const B = [{ t: "portada", titulo: "Resumen ejecutivo", sub: aud.titulo, extra: [aud.unidad, lleno(aud.diseno.periodo) ? "Periodo auditado: " + aud.diseno.periodo : "", lleno(I.destinatarios) ? "Para: " + I.destinatarios : "", "Fecha: " + fecha].filter(lleno) }];
+    B.push({ t: "h1", texto: "En pocas palabras" }, { t: "p", texto: lleno(I.resumen) ? I.resumen : resumenEjecutivoSugerido(aud) });
+    B.push({ t: "h1", texto: "Resultados de un vistazo" });
+    B.push({ t: "tabla", fuente: 9, cab: ["Subproceso", "Qué se ha medido", "Resultado", "Valoración"], anchos: [20, 44, 16, 20], filas: C.map((c, i) => [c.subproceso, c.ind.nombre || c.criterio, { texto: R[i].n ? R[i].textoValor : "—", centro: true }, { texto: CLASIF[c.analisis.clasif] ? CLASIF[c.analisis.clasif].nom : ESTADO_TXT[R[i].estado], negrita: true, fondo: c.analisis.clasif === "noConformidad" ? "FFE4E6" : c.analisis.clasif === "observacion" ? "FEF3C7" : c.analisis.clasif === "conformidad" ? "DCFCE7" : FONDO_ESTADO[R[i].estado] }]) });
+    const altas = C.flatMap(c => c.analisis.recs.filter(x => x.prioridad === "alta" && lleno(x.texto)).map(x => ({ c, x })));
+    if (altas.length) { B.push({ t: "h1", texto: "Recomendaciones prioritarias" }); B.push({ t: "tabla", fuente: 9, cab: ["Recomendación", "Responsable"], anchos: [70, 30], filas: altas.map(({ x }) => [x.texto, x.responsable]) }); }
+    if (lleno(I.fortalezas)) { B.push({ t: "h1", texto: "Fortalezas" }, { t: "p", texto: I.fortalezas }); }
+    B.push({ t: "h1", texto: "Qué se pide a la Dirección" });
+    B.push({ t: "lista", items: ["Respaldar el plan de mejora y los recursos necesarios para las recomendaciones de prioridad alta.", "Acordar los responsables y los plazos en la reunión de devolución de resultados.", "Programar la auditoría de seguimiento para comprobar si las mejoras funcionan."] });
+    return { titulo: "Resumen ejecutivo · " + (aud.titulo || ""), bloques: B };
+  }
+
   // Excel del plan: hoja con el plan y hoja con el cronograma
   function hojasExcelPlan(plan, mapas, fecha) {
     const T = (texto, estilo = "celda") => ({ texto: texto == null ? "" : String(texto), estilo });
@@ -956,10 +1137,13 @@
     caso: { codigo: [40], listado: [8], valor: { en: ["", "si", "no", "na"] }, obs: [500] },
     recogida: { casos: { de: "caso", max: 2000 }, evidencia: [2000], comentario: [3000], observaciones: [3000] },
     ejecucion: { inicio: [20], fin: [20], auditores: [1000], incidencias: [3000] },
-    criterio: { id: "id", subproceso: [200], riesgoId: "ref", hallazgo: [1000], criterio: [1000], ind: { obj: "ind" }, evid: { obj: "evid" }, muestra: { obj: "muestra" }, piloto: { obj: "piloto" }, recogida: { obj: "recogida" } },
+    rec: { id: "id", texto: [1500], responsable: [300], prioridad: { en: ["", ...Object.keys(PRIORIDADES)] }, motivo: [1000], plazo: [100] },
+    analisis: { clasif: { en: ["", ...Object.keys(CLASIF)] }, interpretacion: [3000], porques: { lista: 1000, max: 5, keepEmpty: 5 }, categorias: { lista: 20, max: 6, en: Object.keys(CATEGORIAS_CAUSA) }, causaRaiz: [2000], recs: { de: "rec", max: 20 } },
+    informe: { conclusiones: [5000], fortalezas: [3000], resumen: [5000], destinatarios: [500], estado: { en: Object.keys(ESTADOS_INFORME) } },
+    criterio: { id: "id", subproceso: [200], riesgoId: "ref", hallazgo: [1000], criterio: [1000], ind: { obj: "ind" }, evid: { obj: "evid" }, muestra: { obj: "muestra" }, piloto: { obj: "piloto" }, recogida: { obj: "recogida" }, analisis: { obj: "analisis" } },
     hito: { hecho: "b", fecha: [20], nota: [500] },
     hitos: { aprobacion: { obj: "hito" }, comunicacion: { obj: "hito" }, validacion: { obj: "hito" }, devolucion: { obj: "hito" } },
-    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, diseno: { obj: "diseno" }, control: { obj: "control" }, ejecucion: { obj: "ejecucion" }, criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
+    auditoria: { id: "id", titulo: [300], unidad: [200], proceso: [300], centro: [200], origen: { obj: "origen" }, tipo: { en: Object.keys(TIPOS_AUD) }, objeto: { en: Object.keys(OBJETOS_AUD) }, introduccion: [4000], objetivoGeneral: [2000], objetivosEsp: [4000], alcance: [3000], planId: "ref", entradaId: "ref", hitos: { obj: "hitos" }, diseno: { obj: "diseno" }, control: { obj: "control" }, ejecucion: { obj: "ejecucion" }, informe: { obj: "informe" }, criterios: { de: "criterio", max: 100 }, creado: [40], modificado: [40] },
     persona: { nombre: [200], cargo: [200] },
     revision: { edicion: [10], fecha: [40], cambio: [500] },
     control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "revision", max: 50 } },
@@ -969,7 +1153,7 @@
     plan: { id: "id", anio: [10], ambito: [300], responsable: [300], objetivo: [2000], introduccion: [4000], notas: [3000], capacidad: [3], bloqueados: { nums: [1, 12], max: 12 }, entradas: { de: "entrada", max: 100 }, roles: { obj: "roles" }, aprobacion: { obj: "aprobacion" }, control: { obj: "control" }, creado: [40], modificado: [40] }
   };
   const FABRICA = { riesgo: nuevoRiesgo, mapa: id => nuevoMapa(id, ""), origen: () => nuevaAuditoria("", "").origen, criterio: nuevoCriterio, auditoria: id => nuevaAuditoria(id, ""),
-    hito: nuevoHito, hitos: nuevosHitos, ind: nuevoInd, evid: nuevaEvid, muestra: nuevaMuestra, piloto: nuevoPiloto, par: () => ({ a: "", b: "" }), diseno: nuevoDiseno, caso: () => nuevoCaso(), recogida: nuevaRecogida, ejecucion: nuevaEjecucion, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
+    hito: nuevoHito, hitos: nuevosHitos, ind: nuevoInd, evid: nuevaEvid, muestra: nuevaMuestra, piloto: nuevoPiloto, par: () => ({ a: "", b: "" }), diseno: nuevoDiseno, caso: () => nuevoCaso(), recogida: nuevaRecogida, ejecucion: nuevaEjecucion, rec: nuevaRec, analisis: nuevoAnalisis, informe: nuevoInforme, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }),
     control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), roles: () => nuevoPlan("", "").roles, aprobacion: () => nuevoPlan("", "").aprobacion,
     entrada: nuevaEntrada, plan: id => nuevoPlan(id, "") };
 
@@ -984,6 +1168,7 @@
       else if (Array.isArray(regla)) { if (v !== undefined) r[k] = txt(v, regla[0]); }
       else if (regla.en && !regla.lista) r[k] = regla.en.includes(v) ? v : r[k];
       else if (regla.nums) r[k] = Array.isArray(v) ? [...new Set(v.filter(x => Number.isInteger(x) && x >= regla.nums[0] && x <= regla.nums[1]))].slice(0, regla.max).sort((a, b) => a - b) : [];
+      else if (regla.keepEmpty) r[k] = Array.from({ length: regla.keepEmpty }, (_, j) => Array.isArray(v) ? txt(v[j], regla.lista) : "");
       else if (regla.lista) r[k] = Array.isArray(v) ? [...new Set(v.slice(0, regla.max * 2).map(x => regla.lista === "ref" ? (idValido(x) ? x : "") : txt(x, regla.lista)).filter(x => x && (!regla.en || regla.en.includes(x))))].slice(0, regla.max) : [];
       else if (regla.de) r[k] = Array.isArray(v) ? v.slice(0, regla.max).map(x => sanear(regla.de, x, genId)).filter(Boolean) : [];
       else if (regla.obj) r[k] = sanear(regla.obj, v, genId) || r[k];
@@ -1040,6 +1225,8 @@
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
+    CLASIF, CATEGORIAS_CAUSA, PRIORIDADES, ESTADOS_INFORME, FUERZAS, nuevaRec, clasificacionSugerida, interpretacionSugerida, fuerzaMedida, palabrasNoNeutras,
+    avisosInforme, progresoInforme, resumenEjecutivoSugerido, documentoInforme, documentoResumenEjecutivo,
     nuevoCaso, pareceIdentificador, prepararCasos, margen95, resultadoCriterio, avisosRecogida, progresoRecogida, sugerirEvidencia, ESTADO_TXT, documentoResultados, hojasExcelRecogida,
     TIPOS_IND, EVIDENCIAS, PRINCIPIOS, INSTRUMENTOS, OBJETIVOS_MUESTRA, METODOS_SEL, LQ_COLS,
     formulaInd, textoEstandar, estandarCumplimiento, tamEstimar, margenError, lqas, opcionesLqas, calcMuestra, sortear, concordancia, avisosDiseno, progresoDiseno, indicadoresDeCopia,

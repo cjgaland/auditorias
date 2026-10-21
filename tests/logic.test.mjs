@@ -282,5 +282,31 @@ const dr = L.documentoResultados(ejA, "x");
 t("Word de resultados", new TextDecoder().decode(D.construirDocx(dr)).includes("Matriz de resultados"));
 t("Excel de resultados", X.construirLibroXlsx(L.hojasExcelRecogida(ejA, "x")).length > 1000);
 
+
+// Informe: clasificación, causas, recomendaciones
+const ejI = C.EJEMPLOS.auditorias[0];
+eq("Clasificaciones sugeridas del ejemplo", ejI.criterios.map(L.clasificacionSugerida).map(x => x[0]).join(""), "oonoonoooo");
+eq("Ejemplo: sin avisos graves en el informe", L.avisosInforme(ejI).filter(a => a.nivel !== "nota").map(a => a.texto), []);
+t("Ejemplo: informe completo", Object.values(L.progresoInforme(ejI)).every(Boolean));
+eq("Fuerza: campo obligatorio", L.fuerzaMedida("Añadir un campo obligatorio en la prescripción"), "fuerte");
+eq("Fuerza: lista de verificación", L.fuerzaMedida("Usar una lista de verificación en el traslado"), "intermedia");
+eq("Fuerza: formación", L.fuerzaMedida("Formar al personal en triaje"), "debil");
+eq("Fuerza: «bloqueos» no es bloquear", L.fuerzaMedida("Reunión semanal para revisar los bloqueos"), "intermedia");
+eq("Palabras no neutras", L.palabrasNoNeutras("El personal de noche nunca lo hace por dejadez"), ["dejadez", "nunca"]);
+eq("Texto neutro", L.palabrasNoNeutras("El cumplimiento fue del 65 % en el turno de noche"), []);
+const cI = JSON.parse(JSON.stringify(ejI.criterios[2]));
+cI.analisis.causaRaiz = ""; cI.analisis.recs = [{ id: "x", texto: "Sensibilizar al personal", responsable: "todos", prioridad: "alta", motivo: "", plazo: "" }];
+const AI = L.avisosInforme(Object.assign(L.nuevaAuditoria("ii", ""), { criterios: [cI] }));
+t("Avisos: NC sin causa, responsable vago, medidas débiles", AI.some(a => /causas/.test(a.texto)) && AI.some(a => /no es un responsable concreto/.test(a.texto)) && AI.some(a => /medidas débiles/.test(a.texto)));
+cI.analisis.clasif = "conformidad";
+t("Avisos: conformidad con resultado rechazado", L.avisosInforme(Object.assign(L.nuevaAuditoria("ii", ""), { criterios: [cI] })).some(a => /Revisa la clasificación/.test(a.texto)));
+t("Interpretación sugerida", /LQAS.*se rechaza/.test(L.interpretacionSugerida(ejI.criterios[2])));
+t("Resumen ejecutivo sugerido", /2 no conformidades/.test(L.resumenEjecutivoSugerido(ejI)));
+const sp2 = L.sanear("analisis", { porques: ["a"], recs: [{ texto: "x", prioridad: "urgente" }] }, gid);
+eq("Saneado: 5 porqués y prioridad inválida", [sp2.porques.length, sp2.recs[0].prioridad], [5, ""]);
+const dInf = L.documentoInforme(ejI, C.EJEMPLOS.mapas[0], null, "x"), dRes = L.documentoResumenEjecutivo(ejI, "x");
+t("Word del informe", new TextDecoder().decode(D.construirDocx(dInf)).includes("Causa raíz"));
+t("Word del resumen ejecutivo", new TextDecoder().decode(D.construirDocx(dRes)).includes("Recomendaciones prioritarias"));
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);
