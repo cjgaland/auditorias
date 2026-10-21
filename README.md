@@ -1,5 +1,7 @@
 # Auditorías
 
+https://cjgaland.github.io/auditorias/
+
 PWA estática (HTML/CSS/JS puro, sin dependencias ni CDN, funciona sin conexión) para planificar, realizar, informar y hacer el seguimiento de auditorías de calidad y seguridad del paciente, paso a paso y aprendiendo mientras se hace: del Mapa de Riesgos a la mejora continua, siguiendo el ciclo PDCA.
 
 Recorre el ciclo de mejora completo (Planificar, Hacer, Verificar, Actuar):
