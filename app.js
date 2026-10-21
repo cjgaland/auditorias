@@ -12,8 +12,11 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.06";
+  const APP_VERSION = "2026.07";
   const NOVEDADES = [
+    { version: "2026.07", fecha: "Octubre 2026", titulo: "El método, lo primero del diseño", cambios: [
+      "El diseño de cada auditoría empieza ahora por la metodología (población, periodo, fuentes, método, equipo y recursos), porque de ella dependen los indicadores, las evidencias y la muestra.",
+      "Explicación fácil de cada elemento del método."] },
     { version: "2026.06", fecha: "Octubre 2026", titulo: "Ciclo completo: mejora, seguimiento y autoevaluación", cambios: [
       "Nueva fase de Mejora (Actuar): las recomendaciones del informe se convierten con un clic en acciones con objetivo, responsable, plazo, recursos e indicador de seguimiento.",
       "Matriz criticidad × viabilidad para priorizar: qué hacer ya, qué planificar buscando recursos y qué reconsiderar.",
@@ -556,7 +559,7 @@
       <div class="badges">${o ? `<span class="badge">${o.icono} ${o.nom}</span>` : ""}<span class="badge">${L.TIPOS_AUD[a.tipo]}</span><span class="badge">${L.OBJETOS_AUD[a.objeto].nom}</span></div>
       <ul class="check-lista">${p.items.map(([t, ok]) => `<li class="${ok ? "ok" : ""}">${ok ? "✓" : "○"} ${t}</li>`).join("")}</ul>
       <ul class="check-lista check-lista--hitos">${L.HITOS.map(h => `<li class="${a.hitos[h.k].hecho ? "ok" : ""}">${a.hitos[h.k].hecho ? "✓" : "○"} ${h.nom}</li>`).join("")}</ul>
-      <p class="res-prox"><b>Después:</b> el <a href="#/auditoria/${a.id}/diseno/1">diseño</a> (indicadores, evidencias, muestra y pilotaje), la recogida de datos, el informe y el plan de mejora.</p>
+      <p class="res-prox"><b>Después:</b> el <a href="#/auditoria/${a.id}/diseno/1">diseño</a> (método, indicadores, evidencias, muestra y pilotaje), la recogida de datos, el informe y el plan de mejora.</p>
     </div>`;
   }
 
@@ -949,10 +952,10 @@
   // ---------- Auditoría: diseño (entrega 3) ----------
   let faseAud = "inicio", subDiseno = 1, indImportados = [];
   const PASOS_DIS = [
-    { n: 1, corto: "Indicadores", titulo: "Un indicador por criterio" },
-    { n: 2, corto: "Evidencias", titulo: "Evidencias e instrumentos" },
-    { n: 3, corto: "Muestra", titulo: "Muestra: cuántos casos y cuáles" },
-    { n: 4, corto: "Método", titulo: "Metodología, equipo y recursos" },
+    { n: 1, corto: "Método", titulo: "Metodología, equipo y recursos" },
+    { n: 2, corto: "Indicadores", titulo: "Un indicador por criterio" },
+    { n: 3, corto: "Evidencias", titulo: "Evidencias e instrumentos" },
+    { n: 4, corto: "Muestra", titulo: "Muestra: cuántos casos y cuáles" },
     { n: 5, corto: "Pilotaje", titulo: "Hoja de recogida y pilotaje" },
     { n: 6, corto: "Documento", titulo: "Plan específico de la auditoría" }
   ];
@@ -970,7 +973,7 @@
     return f || e ? `<div class="formula">${esc(f || "Fórmula: escribe numerador y denominador")}${e ? `<br><b>Estándar: ${esc(e)}</b>` : ""}</div>` : "";
   }
 
-  function disPaso1(a) {
+  function disPaso2(a) {
     return `
       ${idea("Cada criterio se convierte en <b>un indicador</b>: algo que se cuenta y se compara con un estándar. Y para que dos auditores lleguen al mismo resultado, hay que escribir <b>cuándo cumple</b>.")}
       ${facil(`<ul><li><b>Nombre</b>: «% de [casos] en los que [se cumple el criterio]».</li>
@@ -980,7 +983,7 @@
         <p>En la hoja de recogida siempre se marca si el caso <b>cumple el criterio</b> (Sí / No / NA), aunque el indicador cuente fallos.</p>
         <p>Para trabajar un indicador a fondo (calidad SMART, pilotaje, compuestos) tienes la app <a href="${L.URL_IND}" target="_blank" rel="noopener">Indicadores ↗</a>; luego puedes importarlo aquí.</p>`)}
       <div class="toolbar no-print"><button class="btn" data-act="importar-ind">⬆ Importar de la app Indicadores</button>${indImportados.length ? `<span class="field-sub">${plural(indImportados.length, "indicador cargado", "indicadores cargados")}: elígelo en cada criterio.</span>` : ""}</div>
-      <div data-zona="avisos-dis">${avisosDisHtml(a, 1)}</div>
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 2)}</div>
       ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
         <div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-ind" data-c="${c.id}">✎ Proponer a partir del criterio</button></div>
         ${indImportados.length ? `<div class="filtros filtros--solo no-print"><label>Usar un indicador importado<select data-act-sel="usar-ind" data-c="${c.id}"><option value="">Elige…</option>${indImportados.map((x, j) => `<option value="${j}">${esc(L.corto(x.nombre, 80))}</option>`).join("")}</select></label></div>` : ""}
@@ -1005,13 +1008,13 @@
       ${trampa("Mezclar el sentido es el error más frecuente: «% de errores» con un estándar «≥ 90 %» premia equivocarse. Si cuentas fallos, el estándar va con ≤.")}`;
   }
 
-  function disPaso2(a) {
+  function disPaso3(a) {
     return `
       ${idea("Sin evidencias no hay auditoría. Combinar varias fuentes —lo registrado, lo observado y lo que cuentan los profesionales— es <b>triangular</b>: la conclusión es más sólida.")}
       ${facil(`<table class="mini facil-tabla"><tr><th>Evidencia</th><th>Para qué</th></tr>${Object.values(L.EVIDENCIAS).map(e => `<tr><td><b>${e.nom}</b></td><td>${e.que}</td></tr>`).join("")}</table>
         <p><b>Instrumentos</b>: ${Object.values(L.INSTRUMENTOS).map(x => `<b>${x.nom.toLowerCase()}</b> (${x.que.charAt(0).toLowerCase() + x.que.slice(1, -1)})`).join("; ")}.</p>
         <p><b>Principios</b>: veracidad, trazabilidad (se puede volver a comprobar), relevancia, fiabilidad de las fuentes, imparcialidad y confidencialidad.</p>`)}
-      <div data-zona="avisos-dis">${avisosDisHtml(a, 2)}</div>
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 3)}</div>
       ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
         ${lleno(c.ind.nombre) ? `<p class="field-sub">Indicador: ${esc(c.ind.nombre)}</p>` : ""}
         <div class="field"><div class="field-head"><label class="field-label">Tipos de evidencia</label></div>${chipsC(c, "evid.tipos", L.EVIDENCIAS, x => x.nom)}</div>
@@ -1047,14 +1050,14 @@
     const r = L.calcMuestra(c), m = c.muestra;
     return `${r.texto ? `<div class="muestra-res"><b>${esc(r.texto)}</b>${Number.isFinite(r.n) && m.objetivo !== "decidir" && m.objetivo !== "todos" && Number.isFinite(L.num(m.N)) ? "" : ""}</div>` : ""}${r.avisos.map(avisoHtml).join("")}`;
   }
-  function disPaso3(a) {
+  function disPaso4(a) {
     return `
       ${idea("La pregunta que lo cambia todo: ¿quieres <b>estimar</b> cuánto se cumple (báscula: más casos) o <b>decidir</b> si hay un problema (arco del aeropuerto: LQAS, pocos casos)?")}
       ${facil(`<ul>${Object.values(L.OBJETIVOS_MUESTRA).map(o => `<li><b>${o.nom}</b>: ${o.que}</li>`).join("")}</ul>
         <p>Sea cual sea, los casos se eligen <b>al azar</b>: ${Object.values(L.METODOS_SEL).map(x => `<b>${x.nom.toLowerCase()}</b> (${x.que.charAt(0).toLowerCase() + x.que.slice(1, -1)})`).join("; ")}.</p>
         ${trampa("La muestra de conveniencia («las historias que hay sobre la mesa») no vale: lo más reciente y lo más a mano suele estar mejor cumplimentado.")}
         <p>Para más cálculos (medias, compuestos, concordancia) tienes <a href="${L.URL_TM}" target="_blank" rel="noopener">Tamaño Muestral ↗</a>.</p>`)}
-      <div data-zona="avisos-dis">${avisosDisHtml(a, 3)}</div>
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 4)}</div>
       ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
         ${lleno(c.ind.nombre) ? `<p class="field-sub">Indicador: ${esc(c.ind.nombre)} · estándar ${esc(L.textoEstandar(c.ind)) || "sin definir"}</p>` : ""}
         <div class="dos-col">
@@ -1071,16 +1074,17 @@
   }
 
   const EQUIPO_SUG = ["Coordinador/a de Calidad y Seguridad del Paciente", "Supervisor/a de Enfermería", "Facultativo/a del servicio", "Enfermera/o asistencial", "TCAE", "Personal administrativo", "Técnico/a de Calidad (observador externo)"];
-  function disPaso4(a) {
+  function disPaso1(a) {
     const D = a.diseno;
     return `
-      ${idea("El plan específico deja escrito <b>quién</b> audita, <b>de qué periodo</b> son los casos, <b>de dónde</b> salen los datos y <b>con qué recursos</b>: así la auditoría se puede repetir igual en el seguimiento.")}
-      <div data-zona="avisos-dis">${avisosDisHtml(a, 4)}</div>
+      ${idea("Lo primero es el <b>método</b>: <b>a quién</b> se audita (población), <b>de qué periodo</b> son los casos, <b>de dónde</b> salen los datos, <b>quién</b> audita y <b>con qué recursos</b>. De esto dependen los indicadores, las evidencias y la muestra; y dejarlo escrito permite repetir la auditoría igual en el seguimiento.")}
+      ${facil(`<ul><li><b>Población</b>: los casos sobre los que se calcularán los indicadores (su denominador).</li><li><b>Periodo</b>: de qué fechas son los casos. Debe ser reciente y representativo.</li><li><b>Fuentes</b>: historia clínica, registros, observación directa, entrevistas… Marcan qué evidencias podrás usar.</li><li><b>Método</b>: cómo se va a revisar (documental, observación, entrevistas) y con qué tipo de hoja.</li></ul><p>Puedes afinarlo después, cuando elijas evidencias e instrumentos en el paso 3.</p>`)}
+      <div data-zona="avisos-dis">${avisosDisHtml(a, 1)}</div>
       <div class="card">
         ${campo(a, "diseno.poblacion", "Población", { area: true, ph: "p. ej. Pacientes atendidos en Urgencias con decisión de ingreso hospitalario" })}
         ${campo(a, "diseno.periodo", "Periodo auditado", { ph: "p. ej. Del 1 al 31 de mayo" })}
         ${campo(a, "diseno.fuentes", "Fuentes de información", { area: true, ph: "p. ej. Historia clínica electrónica, registros de enfermería, observación directa, entrevistas" })}
-        ${campo(a, "diseno.metodologia", "Método", { area: true, rows: 3, ph: "p. ej. Revisión documental, observación directa y entrevistas, con hoja de recogida de respuesta cerrada", extra: `<div class="quick"><button type="button" class="chip chip--accent" data-act="sug-metodo">✎ Proponer a partir del diseño</button></div>` })}
+        ${campo(a, "diseno.metodologia", "Método", { area: true, rows: 3, ph: "p. ej. Revisión documental, observación directa y entrevistas, con hoja de recogida de respuesta cerrada", extra: `<div class="quick"><button type="button" class="chip chip--accent" data-act="sug-metodo">✎ Proponer un texto de partida</button></div>` })}
       </div>
       <h2 class="sec-t">Equipo auditor</h2>
       <div class="card">

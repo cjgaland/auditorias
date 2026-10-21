@@ -1,6 +1,6 @@
 # CLAUDE.md — Auditorías
 
-Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo y el plan por entregas están en `/Users/Trabajo/Desktop/Auditorías/DISEÑO_SUPERAPLICACION.md` (léelo también al empezar una sesión).
+Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo y el plan por entregas están en `/Users/Trabajo/Desktop/Auditorías/Diseño/DISEÑO_SUPERAPLICACION.md` (léelo también al empezar una sesión).
 
 ## 1. Descripción
 PWA estática (sin build, sin dependencias, sin CDN) para **planificar, realizar, informar y hacer el seguimiento de auditorías de calidad y seguridad del paciente**, paso a paso y de forma didáctica, siguiendo el ciclo PDCA. Nace del curso «Auditorías para la Mejora de la Seguridad del Paciente. Del Mapa de Riesgos a la Mejora Continua» (contenido en `/Users/Trabajo/Desktop/Auditorías/Curso Auditorías`), para que el alumnado pueda hacer solo una auditoría real después del curso. Herramienta docente y de apoyo; no sustituye el criterio profesional.
@@ -46,15 +46,24 @@ Autoría (idéntica en el pie de index.html, «Acerca de», `informePie()` en ap
 
 ## 4. Entorno y pruebas
 - Node v26 (Homebrew). `node tests/logic.test.mjs`.
-- Servir en local: el panel de vista previa NO puede arrancar el servidor (sin permiso para leer el Escritorio). Arrancarlo desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/App Auditorías" && python3 -m http.server 8767`, y abrir la vista previa `app-auditorias` de `/Users/Trabajo/Desktop/Auditorías/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
+- Servir en local: el panel de vista previa NO puede arrancar el servidor (sin permiso para leer el Escritorio). Arrancarlo desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/Auditorías/Aplicación" && python3 -m http.server 8767`, y abrir la vista previa `app-auditorias` de `/Users/Trabajo/Desktop/Auditorías/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
 - Revisar siempre en escritorio y en móvil (360 px): sin scroll horizontal (`document.documentElement.scrollWidth === 360`), y en modo oscuro.
 
 ## 5. Versiones
 - `APP_VERSION` y `NOVEDADES` al principio de `app.js` (formato AAAA.NN, la más reciente arriba). Claves de localStorage: `auditorias-datos`, `auditorias-tema`, `auditorias-bienvenida-vista`, `auditorias-version-vista`, `auditorias-facil-abierto`.
 
 ## 6. Copias de seguridad locales
-Carpeta `Backup/` (ignorada en git) con las 5 copias más recientes:
-`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/App Auditorías" --name Auditorias`. Hacer una antes de cada publicación.
+Estructura de la carpeta del proyecto (desde 2026-10-21):
+```
+Desktop/Auditorías/
+├── Aplicación/            ← la app (este repositorio git, lo que se publica)
+├── Backup/                ← 5 copias más recientes, fuera del repositorio
+├── Curso Auditorías/      ← material del curso (fuente de contenidos)
+├── Diseño/                ← DISEÑO_SUPERAPLICACION.md
+└── Documentos de ejemplo/ ← los Word del ejemplo de Urgencias generados con la app
+```
+Copias de seguridad en `Desktop/Auditorías/Backup/`, con las 5 más recientes:
+`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/Auditorías" --name Auditorias --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (con comodín: los nombres con tilde que crea el Finder no casan si se escriben tal cual) (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
 
 ## 7. Publicación
 Publicada el 2026-10-21 (v2026.06) con permiso del autor: repositorio público `cjgaland/auditorias`, GitHub Pages desde `main` (raíz): https://cjgaland.github.io/auditorias/. Enlazada desde Indicadores (v2026.04) y Tamaño Muestral (v2026.14). Cada nueva publicación (push) solo cuando el autor lo pida. Pasos por versión: copia de seguridad; entrada en `NOVEDADES` + `APP_VERSION`; mismos `?v=` en index.html; subir `CACHE_NAME` en sw.js; tests; commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; push.

@@ -209,7 +209,7 @@
   const FASES = [
     { k: "riesgos", n: 0, pdca: "P", corto: "Riesgos", titulo: "Punto de partida", que: "Qué puede fallar y qué es prioritario auditar.", doc: "Mapa de Riesgos priorizado", entrega: 1 },
     { k: "plan", n: 1, pdca: "P", corto: "Plan anual", titulo: "Plan anual de auditorías", que: "Qué se audita este año, con qué alcance y criterios, cuándo y con quién.", doc: "Plan Anual de Auditorías", entrega: 2 },
-    { k: "diseno", n: 2, pdca: "P", corto: "Diseño", titulo: "Diseño de la auditoría", que: "Criterios, indicadores, evidencias, instrumentos y muestra.", doc: "Plan específico y hoja de recogida", entrega: 3 },
+    { k: "diseno", n: 2, pdca: "P", corto: "Diseño", titulo: "Diseño de la auditoría", que: "Método y equipo, indicadores, evidencias, instrumentos y muestra.", doc: "Plan específico y hoja de recogida", entrega: 3 },
     { k: "hacer", n: 3, pdca: "H", corto: "Recogida", titulo: "Recogida de datos", que: "Revisar los casos, recoger las evidencias y calcular resultados.", doc: "Matriz de resultados", entrega: 4 },
     { k: "verificar", n: 4, pdca: "V", corto: "Informe", titulo: "Informe de resultados", que: "Interpretar, redactar hallazgos y recomendaciones.", doc: "Informe de auditoría y resumen ejecutivo", entrega: 5 },
     { k: "actuar", n: 5, pdca: "A", corto: "Mejora", titulo: "Mejora y seguimiento", que: "Plan de acción, responsables, plazos y auditoría de seguimiento.", doc: "Plan de mejora e informe de seguimiento", entrega: 6 }
@@ -248,7 +248,7 @@
     const incompleta = auds.find(a => { const p = progresoInicio(a); return p.hechos < p.total; });
     if (incompleta) return { k: "completar", texto: `Completa los datos de inicio de «${corto(incompleta.titulo || "tu auditoría", 50)}»: origen, unidad, objetivo y subprocesos.`, href: "#/auditoria/" + incompleta.id, btn: "Seguir con la auditoría" };
     const sinDiseno = auds.find(a => { const g = progresoDiseno(a); return ![1, 2, 3, 4].every(k => g[k]); });
-    if (sinDiseno) { const g = progresoDiseno(sinDiseno), paso = [1, 2, 3, 4].find(k => !g[k]); return { k: "disenar", texto: `Diseña «${corto(sinDiseno.titulo || "tu auditoría", 50)}»: te falta ${["", "un indicador por criterio", "elegir evidencias e instrumentos", "calcular la muestra", "la metodología y el equipo"][paso]}.`, href: `#/auditoria/${sinDiseno.id}/diseno/${paso}`, btn: "Seguir con el diseño" }; }
+    if (sinDiseno) { const g = progresoDiseno(sinDiseno), paso = [1, 2, 3, 4].find(k => !g[k]); return { k: "disenar", texto: `Diseña «${corto(sinDiseno.titulo || "tu auditoría", 50)}»: te falta ${["", "el método y el equipo", "un indicador por criterio", "elegir evidencias e instrumentos", "calcular la muestra"][paso]}.`, href: `#/auditoria/${sinDiseno.id}/diseno/${paso}`, btn: "Seguir con el diseño" }; }
     const sinPiloto = auds.find(a => !progresoDiseno(a)[5]);
     if (sinPiloto) return { k: "pilotar", texto: `Antes de recoger datos en «${corto(sinPiloto.titulo || "tu auditoría", 50)}», pilota la hoja de recogida con dos auditores en 5–10 casos.`, href: `#/auditoria/${sinPiloto.id}/diseno/5`, btn: "Hacer el pilotaje" };
     const sinDatos = auds.find(a => { const p = progresoRecogida(a); return p.completos < p.total; });
@@ -431,38 +431,38 @@
     if (!C.length) { A.push({ nivel: "nota", paso: 1, texto: "La auditoría no tiene criterios todavía: añádelos en el paso de Inicio." }); return A; }
     C.forEach((c, i) => {
       const ind = c.ind;
-      if (!lleno(ind.nombre)) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: falta el nombre del indicador.` });
-      if (lleno(ind.nombre) && (!lleno(ind.numerador) || !lleno(ind.denominador))) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: define numerador y denominador; si no, cada auditor contará distinto.` });
-      if (lleno(ind.nombre) && !lleno(ind.estandar)) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: sin estándar no se puede decir si cumple o no.` });
+      if (!lleno(ind.nombre)) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: falta el nombre del indicador.` });
+      if (lleno(ind.nombre) && (!lleno(ind.numerador) || !lleno(ind.denominador))) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: define numerador y denominador; si no, cada auditor contará distinto.` });
+      if (lleno(ind.nombre) && !lleno(ind.estandar)) A.push({ nivel: "warn", paso: 2, texto: `${nom(c, i)}: sin estándar no se puede decir si cumple o no.` });
       const est = pctNum(ind.estandar);
-      if (Number.isFinite(est) && (est < 0 || est > 100)) A.push({ nivel: "error", paso: 1, texto: `${nom(c, i)}: el estándar es un porcentaje entre 0 y 100.` });
-      if (Number.isFinite(est) && ind.sentido === "mas" && est < 50) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: estándar ≥ ${est} %. ¿Seguro que no cuentas fallos? Si el indicador cuenta errores, el sentido es «menos es mejor» (≤).` });
-      if (Number.isFinite(est) && ind.sentido === "menos" && est > 50) A.push({ nivel: "warn", paso: 1, texto: `${nom(c, i)}: estándar ≤ ${est} %. ¿Seguro que cuentas fallos? Si cuentas aciertos, el sentido es «más es mejor» (≥).` });
-      if (lleno(ind.nombre) && !lleno(ind.cumpleSi)) A.push({ nivel: "nota", paso: 1, texto: `${nom(c, i)}: escribe «cumple si…». Es lo que hace que dos auditores lleguen al mismo resultado.` });
+      if (Number.isFinite(est) && (est < 0 || est > 100)) A.push({ nivel: "error", paso: 2, texto: `${nom(c, i)}: el estándar es un porcentaje entre 0 y 100.` });
+      if (Number.isFinite(est) && ind.sentido === "mas" && est < 50) A.push({ nivel: "warn", paso: 2, texto: `${nom(c, i)}: estándar ≥ ${est} %. ¿Seguro que no cuentas fallos? Si el indicador cuenta errores, el sentido es «menos es mejor» (≤).` });
+      if (Number.isFinite(est) && ind.sentido === "menos" && est > 50) A.push({ nivel: "warn", paso: 2, texto: `${nom(c, i)}: estándar ≤ ${est} %. ¿Seguro que cuentas fallos? Si cuentas aciertos, el sentido es «más es mejor» (≥).` });
+      if (lleno(ind.nombre) && !lleno(ind.cumpleSi)) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: escribe «cumple si…». Es lo que hace que dos auditores lleguen al mismo resultado.` });
       const ev = c.evid;
-      if (!ev.tipos.length) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: elige al menos un tipo de evidencia.` });
-      else if (ev.tipos.length === 1) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: una sola fuente de evidencia. Si puedes, triangula con otra (lo registrado frente a lo observado o lo que cuentan los profesionales).` });
-      if (ev.tipos.length && !ev.instrumentos.length) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: elige el instrumento de recogida.` });
-      if (ev.tipos.includes("observacion") && !ev.instrumentos.includes("observacion") && !ev.instrumentos.includes("checklist")) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: para la observación directa conviene una observación estructurada o una lista de verificación.` });
-      if (ev.tipos.includes("entrevista") && !ev.instrumentos.includes("entrevista")) A.push({ nivel: "nota", paso: 2, texto: `${nom(c, i)}: para las entrevistas conviene una guía de entrevista.` });
-      if (!lleno(c.muestra.objetivo)) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige cómo se calcula la muestra (decidir, estimar, regla práctica o todos).` });
-      else calcMuestra(c).avisos.filter(a => a.nivel !== "nota").forEach(a => A.push({ nivel: a.nivel, paso: 3, texto: `${nom(c, i)}: ${a.texto}` }));
-      if (lleno(c.muestra.objetivo) && c.muestra.objetivo !== "todos" && !lleno(c.muestra.metodo)) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige cómo se seleccionan los casos al azar.` });
+      if (!ev.tipos.length) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige al menos un tipo de evidencia.` });
+      else if (ev.tipos.length === 1) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: una sola fuente de evidencia. Si puedes, triangula con otra (lo registrado frente a lo observado o lo que cuentan los profesionales).` });
+      if (ev.tipos.length && !ev.instrumentos.length) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: elige el instrumento de recogida.` });
+      if (ev.tipos.includes("observacion") && !ev.instrumentos.includes("observacion") && !ev.instrumentos.includes("checklist")) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: para la observación directa conviene una observación estructurada o una lista de verificación.` });
+      if (ev.tipos.includes("entrevista") && !ev.instrumentos.includes("entrevista")) A.push({ nivel: "nota", paso: 3, texto: `${nom(c, i)}: para las entrevistas conviene una guía de entrevista.` });
+      if (!lleno(c.muestra.objetivo)) A.push({ nivel: "nota", paso: 4, texto: `${nom(c, i)}: elige cómo se calcula la muestra (decidir, estimar, regla práctica o todos).` });
+      else calcMuestra(c).avisos.filter(a => a.nivel !== "nota").forEach(a => A.push({ nivel: a.nivel, paso: 4, texto: `${nom(c, i)}: ${a.texto}` }));
+      if (lleno(c.muestra.objetivo) && c.muestra.objetivo !== "todos" && !lleno(c.muestra.metodo)) A.push({ nivel: "nota", paso: 4, texto: `${nom(c, i)}: elige cómo se seleccionan los casos al azar.` });
       const k = concordancia(c.piloto.pares);
       if (k.n && !k.pocos && k.nivel === "bajo") A.push({ nivel: "warn", paso: 5, texto: `${nom(c, i)}: concordancia baja en el pilotaje (${nfmt(k.pct, 0)} %). Aclara la definición antes de recoger datos.` });
     });
-    if (!lleno(aud.diseno.periodo)) A.push({ nivel: "nota", paso: 4, texto: "Indica el periodo auditado (de qué fechas son los casos)." });
-    if (!lleno(aud.diseno.equipo)) A.push({ nivel: "nota", paso: 4, texto: "Indica quién forma el equipo auditor." });
+    if (!lleno(aud.diseno.periodo)) A.push({ nivel: "nota", paso: 1, texto: "Indica el periodo auditado (de qué fechas son los casos)." });
+    if (!lleno(aud.diseno.equipo)) A.push({ nivel: "nota", paso: 1, texto: "Indica quién forma el equipo auditor." });
     if (!C.some(c => c.piloto.pares.some(p => lleno(p.a) && lleno(p.b)))) A.push({ nivel: "nota", paso: 5, texto: "Aún no has hecho ningún pilotaje. Prueba la hoja con dos auditores en 5–10 casos antes de empezar." });
     return A;
   }
   function progresoDiseno(aud) {
     const C = aud.criterios, todos = f => C.length > 0 && C.every(f);
     return {
-      1: todos(c => lleno(c.ind.nombre) && lleno(c.ind.numerador) && lleno(c.ind.denominador) && lleno(c.ind.estandar)),
-      2: todos(c => c.evid.tipos.length > 0 && c.evid.instrumentos.length > 0),
-      3: todos(c => lleno(c.muestra.objetivo) && Number.isFinite(calcMuestra(c).n)),
-      4: lleno(aud.diseno.periodo) && lleno(aud.diseno.equipo),
+      1: lleno(aud.diseno.periodo) && lleno(aud.diseno.equipo),
+      2: todos(c => lleno(c.ind.nombre) && lleno(c.ind.numerador) && lleno(c.ind.denominador) && lleno(c.ind.estandar)),
+      3: todos(c => c.evid.tipos.length > 0 && c.evid.instrumentos.length > 0),
+      4: todos(c => lleno(c.muestra.objetivo) && Number.isFinite(calcMuestra(c).n)),
       5: C.some(c => concordancia(c.piloto.pares).n >= 5)
     };
   }
