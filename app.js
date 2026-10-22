@@ -12,8 +12,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.09";
+  const APP_VERSION = "2026.10";
   const NOVEDADES = [
+    { version: "2026.10", fecha: "Octubre 2026", titulo: "Nuevas apps hermanas: Flujograma y DAFO · CAME", cambios: [
+      "Enlaces a las nuevas apps hermanas Flujograma (dibuja el flujograma de un proceso con sus puntos críticos) y DAFO · CAME (análisis DAFO de una unidad y plan de acción) en la portada y en «Acerca de»."] },
     { version: "2026.09", fecha: "Octubre 2026", titulo: "Traer de AMFE", cambios: [
       "Nuevo botón «Traer de AMFE» en el Mapa de Riesgos: crea un mapa con los fallos, sus G·O·D y las medidas actuales de un AMFE hecho en la app AMFE de este navegador o en su copia .json.",
       "Los fallos prioritarios llegan como hallazgos clave, con la acción de mejora, el indicador como evidencia esperada y el motivo de elección.",
@@ -239,6 +241,8 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña y comprueba</b> los indicadores de tu auditoría.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">IPR</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: <b>analiza los fallos de un proceso</b> (G·O·D e IPR) y decide cuáles priorizar antes de auditar.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma del proceso</b> que vas a auditar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO; sus debilidades y amenazas te dicen qué conviene auditar.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> nunca escribas en la app nombres de pacientes ni números de historia clínica. Usa códigos (HC-01, HC-02…) y guarda la correspondencia, si la necesitas, en un lugar autorizado de tu centro.")}`;
   }

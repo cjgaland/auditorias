@@ -12,6 +12,8 @@
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
+  const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
+  const URL_DAFO = "https://cjgaland.github.io/dafo/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1420,7 +1422,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
+    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
