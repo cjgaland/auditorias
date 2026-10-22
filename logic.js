@@ -1341,6 +1341,56 @@
     return { mapas: une(actual.mapas, nuevo.mapas), auditorias: une(actual.auditorias, nuevo.auditorias), planes: une(actual.planes || [], nuevo.planes || []) };
   }
 
+  // ---------- Traer de AMFE (paquete «amfe-fallos» v1 que escribe la app AMFE; ECOSISTEMA.md, sección 4) ----------
+  // Se lee de localStorage["amfe-intercambio"] o de la copia .json de AMFE (clave «intercambio»). Se copia, no se enlaza.
+  const FORMATO_AMFE = "amfe-fallos", VERSION_AMFE = 1;
+  // Devuelve { amfes } si el paquete es válido o { error } con un aviso claro (y entonces no se importa nada)
+  function leerAmfe(o) {
+    if (o && typeof o === "object" && o.intercambio !== undefined) o = o.intercambio;
+    else if (o && typeof o === "object" && o.app === "amfe" && o.formato === undefined && Array.isArray(o.amfes)) return { error: "Esta copia de AMFE no trae los fallos preparados para otras apps. Ábrela en la versión actual de AMFE, haz una copia nueva y vuelve a intentarlo." };
+    if (!o || typeof o !== "object" || Array.isArray(o)) return { error: "No se reconocen datos de AMFE. Usa la copia de seguridad (.json) que descarga la app AMFE." };
+    if (o.formato !== FORMATO_AMFE) return { error: `No son datos de AMFE (formato «${txt(o.formato, 40) || "desconocido"}»; se espera «${FORMATO_AMFE}»). No se ha importado nada.` };
+    if (o.version !== VERSION_AMFE) return { error: `Los datos de AMFE vienen en la versión ${txt(o.version, 10) || "?"} del formato y esta versión de Auditorías lee la ${VERSION_AMFE}. Actualiza las dos apps (recarga la página) y vuelve a intentarlo. No se ha importado nada.` };
+    if (!Array.isArray(o.amfes)) return { error: "El paquete de AMFE no trae ninguna lista de AMFE. No se ha importado nada." };
+    const amfes = o.amfes.filter(x => x && typeof x === "object" && !Array.isArray(x) && Array.isArray(x.fallos)).slice(0, 200);
+    return { amfes, generado: txt(o.generado, 40), appVersion: txt(o.appVersion, 20) };
+  }
+  // Lo que se enseña en la lista para elegir
+  function resumenAmfe(a) {
+    const fs = a.fallos.filter(f => f && typeof f === "object");
+    return { titulo: txt(a.titulo, 200) || txt(a.proceso, 200) || "AMFE sin título", unidad: txt(a.unidad, 200), fecha: fmtFecha(txt(a.fecha, 40)), n: fs.length, prioritarios: fs.filter(f => f.prioritario === true).length };
+  }
+  // Un AMFE del paquete → un mapa nuevo (pasa por sanearDatos). Devuelve { mapa, avisos }
+  function mapaDesdeAmfe(a, genId, fecha) {
+    const t = v => txt(v, 2000), god = v => v == null ? "" : txt(v, 3);
+    const fs = (Array.isArray(a.fallos) ? a.fallos : []).filter(f => f && typeof f === "object");
+    const subs = (Array.isArray(a.subprocesos) ? a.subprocesos : []).filter(s => s && typeof s === "object")
+      .map((s, i) => ({ o: Number.isFinite(s.orden) ? s.orden : i + 1, i, nombre: t(s.nombre).trim() })).sort((x, y) => x.o - y.o || x.i - y.i).map(s => s.nombre).filter(Boolean);
+    const riesgos = fs.map(f => {
+      const r = { subproceso: t(f.subproceso), fallo: t(f.fallo), efecto: t(f.efecto), causa: t(f.causa), g: god(f.g), o: god(f.o), d: god(f.d), medidas: t(f.controles), clave: f.prioritario === true, accion: "", evidencia: "", motivo: "" };
+      if (r.clave) {
+        const acc = (Array.isArray(f.acciones) ? f.acciones : []).filter(x => x && typeof x === "object");
+        const conInd = acc.find(x => x.indicador && typeof x.indicador === "object" && lleno(txt(x.indicador.nombre, 500)));
+        r.accion = acc.length ? t(acc[0].que) : "";
+        if (conInd) r.evidencia = [t(conInd.indicador.nombre), t(conInd.indicador.estandar)].filter(lleno).join(" · ");
+        const mot = t(f.motivo).trim(), v = ipr(f.g, f.o, f.d);
+        if (mot) r.motivo = f.critico === true && !/cr[ií]tico/i.test(mot) ? "Fallo crítico. " + mot : mot;
+        else r.motivo = [v ? `IPR ${v}${Number.isInteger(f.puesto) ? ` (puesto ${f.puesto})` : ""}` : "", f.critico === true ? "fallo crítico" : ""].filter(Boolean).join("; ");
+      }
+      return r;
+    });
+    const titulo = t(a.titulo) || t(a.proceso);
+    const bruto = { id: genId(), nombre: titulo, unidad: t(a.unidad), proceso: t(a.proceso), fecha: fmtFecha(txt(a.fecha, 40)),
+      notas: `Traído de la app AMFE el ${fmtFecha(String(fecha).slice(0, 10))}. Es una copia: si el AMFE cambia, vuelve a traerlo.`, subprocesos: subs, riesgos, creado: fecha, modificado: fecha };
+    const mapa = sanearDatos({ mapas: [bruto] }, genId, fecha).mapas[0];
+    const avisos = [], claves = mapa.riesgos.filter(r => r.clave).length, max = ESQ.mapa.riesgos.max;
+    if (!fs.length) avisos.push("Este AMFE no tiene fallos escritos: el mapa se crea vacío.");
+    if (fs.length > max) avisos.push(`El AMFE tiene ${fs.length} fallos y un mapa admite ${max}: se han traído los ${max} primeros.`);
+    if (subs.length > ESQ.mapa.subprocesos.max) avisos.push(`Solo se guardan los ${ESQ.mapa.subprocesos.max} primeros subprocesos.`);
+    if (claves > 5) avisos.push(`Quedan ${claves} hallazgos clave (los fallos prioritarios del AMFE). Lo habitual es auditar de 3 a 5: quita la ★ a los que no vayas a comprobar ahora.`);
+    return { mapa, avisos };
+  }
+
   // ---------- Excel ----------
   const ESTILOS_XLSX = {
     titulo: { negrita: true, tamano: 14, colorTexto: "FFFFFF", colorFondo: "0B6F66", borde: false },
@@ -1384,7 +1434,7 @@
     fmtFecha, sinArticulo, HITOS, nuevosHitos, nuevoControl, nuevaPersona, FRECUENCIAS, TIPOS_ENTRADA, TIPOS_CRITERIO, MESES, MESES_LARGO,
     nuevoPlan, nuevaEntrada, riesgosDeEntrada, hallazgosDeEntrada, prioridadEntrada, frecuenciaSugerida, rondas, cargaMensual, capacidadDe, textoMeses,
     repartir, avisosPlan, progresoPlan, entradasDesdeMapa, documentoPlan, documentoMapa, documentoPlanEspecifico, documentoHoja, hojasExcelPlan,
-    sanear, sanearDatos, fusionar, hojasExcelMapa
+    sanear, sanearDatos, fusionar, hojasExcelMapa, FORMATO_AMFE, VERSION_AMFE, leerAmfe, resumenAmfe, mapaDesdeAmfe
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API; else raiz.Logica = API;
 })(typeof window !== "undefined" ? window : globalThis);

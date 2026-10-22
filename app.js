@@ -12,8 +12,12 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.08";
+  const APP_VERSION = "2026.09";
   const NOVEDADES = [
+    { version: "2026.09", fecha: "Octubre 2026", titulo: "Traer de AMFE", cambios: [
+      "Nuevo botón «Traer de AMFE» en el Mapa de Riesgos: crea un mapa con los fallos, sus G·O·D y las medidas actuales de un AMFE hecho en la app AMFE de este navegador o en su copia .json.",
+      "Los fallos prioritarios llegan como hallazgos clave, con la acción de mejora, el indicador como evidencia esperada y el motivo de elección.",
+      "Los datos se copian: si el AMFE cambia, se vuelve a traer."] },
     { version: "2026.08", fecha: "Octubre 2026", titulo: "Nueva app hermana: AMFE", cambios: [
       "Enlace a la nueva app hermana AMFE (Análisis Modal de Fallos y Efectos) en la portada y en «Acerca de»: analiza los fallos de un proceso, puntúa G·O·D e IPR y decide cuáles priorizar."] },
     { version: "2026.07", fecha: "Octubre 2026", titulo: "El método, lo primero del diseño", cambios: [
@@ -257,7 +261,8 @@
         <li>Y tres puntuaciones de 1 a 10: <b>Gravedad</b> (G), <b>Ocurrencia</b> (O) y <b>Detección</b> (D).</li></ul>
         <div class="formula">IPR = G × O × D (de 1 a 1.000)</div>
         <p>Cuanto más alto el <b>Índice de Prioridad de Riesgo</b>, antes conviene actuar… y auditar. Los riesgos que eliges para auditar son tus <b>hallazgos clave</b>.</p>`)}
-      <div class="toolbar no-print"><a class="btn btn--primary" href="#/riesgos/nuevo">+ Nuevo mapa</a><a class="btn" href="#/riesgos/ej-mapa-urg">Ver un ejemplo</a></div>
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/riesgos/nuevo">+ Nuevo mapa</a><button class="btn" data-act="amfe-abrir">Traer de AMFE</button><a class="btn" href="#/riesgos/ej-mapa-urg">Ver un ejemplo</a></div>
+      ${traerAbierto ? traerHtml() : ""}
       ${lista.length ? `<div class="cuadro-lista">${lista.map(tarjetaMapa).join("")}</div>`
         : `<div class="placeholder-box"><p><b>Todavía no tienes ningún mapa.</b></p><p>Crea uno nuevo y escribe los fallos de tu proceso, o pega la tabla de un AMFE que ya tengas en Excel. Si quieres ver antes cómo queda, abre el ejemplo de Urgencias.</p></div>`}`;
   }
@@ -274,7 +279,7 @@
   }
 
   // ---------- Mapa de Riesgos: edición ----------
-  let actualMapa = null, ordenMapa = "ipr", filtroSub = "", pegarAbierto = false;
+  let actualMapa = null, ordenMapa = "ipr", filtroSub = "", pegarAbierto = false, traerAbierto = false, amfeCopia = null;
   const abiertos = new Set();
   const subprocesosDe = m => [...new Set([...m.subprocesos, ...m.riesgos.map(r => r.subproceso)].map(s => String(s || "").trim()).filter(Boolean))];
 
@@ -363,6 +368,45 @@
     </div>`;
   }
 
+  // «Traer de AMFE»: lee el paquete «amfe-fallos» que deja la app AMFE en este navegador (mismo dominio) o su copia .json
+  function amfeDisponible() {
+    if (amfeCopia) return Object.assign({ origen: "copia" }, amfeCopia);
+    const bruto = leer("amfe-intercambio");
+    if (!bruto) return { origen: "nada" };
+    let o = null; try { o = JSON.parse(bruto); } catch (e) { /* */ }
+    return Object.assign({ origen: "navegador" }, L.leerAmfe(o));
+  }
+  function traerHtml() {
+    const d = amfeDisponible(), lista = d.amfes || [];
+    const cargar = `<button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="amfe-archivo">Cargar la copia .json de AMFE</button>`;
+    let cuerpo;
+    if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de AMFE en este navegador. Si has hecho el AMFE en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no lo tienes, hazlo en la app <a href="${L.URL_AMFE}" target="_blank" rel="noopener">AMFE ↗</a>.</div>`;
+    else if (d.error) cuerpo = avisoHtml({ nivel: "error", texto: d.error });
+    else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : "La app AMFE de este navegador"} no tiene ningún AMFE propio todavía (los ejemplos no se comparten).</div>`;
+    else cuerpo = `<p class="field-sub">${d.origen === "copia" ? "De la copia cargada" : "Guardados en la app AMFE de este navegador"}${d.generado ? ` · actualizados el ${esc(fechaCorta(d.generado))}` : ""}. Elige cuál traer:</p>
+      <div class="amfe-lista">${lista.map((a, i) => { const r = L.resumenAmfe(a); return `<div class="amfe-op">
+        <div class="amfe-op-txt"><b>${esc(r.titulo)}</b><span>${esc([r.unidad, r.fecha].filter(lleno).join(" · ")) || "&nbsp;"}</span>
+        <span class="badges"><span class="badge">${plural(r.n, "fallo", "fallos")}</span>${r.prioritarios ? `<span class="badge badge--clave">★ ${plural(r.prioritarios, "prioritario", "prioritarios")}</span>` : ""}</span></div>
+        <button class="btn btn--primary" data-act="amfe-traer" data-i="${i}">Traer este</button></div>`; }).join("")}</div>`;
+    return `<div class="card pegar no-print" data-zona="traer">
+      <h3 class="sub-h">Traer un AMFE</h3>
+      <p class="field-sub">Se crea un <b>mapa nuevo</b> con los fallos, sus G·O·D y las medidas actuales; los fallos prioritarios quedan como hallazgos clave. Los datos <b>se copian</b>: si después cambian en AMFE, vuelve a traerlo.</p>
+      ${cuerpo}
+      <div class="toolbar">${cargar}${d.origen === "copia" ? `<button class="btn" data-act="amfe-olvidar">Usar los de este navegador</button>` : ""}<button class="btn" data-act="amfe-cerrar">Cancelar</button></div>
+    </div>`;
+  }
+  function repintarTraer() {
+    if (actualMapa && location.hash.startsWith("#/riesgos/")) repintarMapa(); else renderMapas();
+    const z = $("[data-zona='traer']"); if (z) z.scrollIntoView({ block: "nearest" });
+  }
+  function traerAmfe(i) {
+    const d = amfeDisponible(), a = d.amfes && d.amfes[i]; if (!a) return;
+    const { mapa, avisos } = L.mapaDesdeAmfe(a, genId, hoy());
+    datosUsuario.mapas.push(mapa); traerAbierto = false; amfeCopia = null; guardar(true);
+    location.hash = "#/riesgos/" + mapa.id;
+    toast(`Mapa creado con ${plural(mapa.riesgos.length, "riesgo", "riesgos")}${avisos.length ? ". " + avisos.join(" ") : ". Revisa los hallazgos clave."}`, avisos.length ? 8000 : 4500);
+  }
+
   function renderMapa(m) {
     actualMapa = m; actualAud = null; nAyuda = 0;
     if (document.body.classList.contains("ver-informe")) { renderMapaInforme(m); return; }
@@ -398,8 +442,10 @@
       <div class="toolbar no-print">
         <button class="btn btn--primary" data-act="rg-add">+ Añadir riesgo</button>
         <button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>
+        ${modoEjemplo ? "" : `<button class="btn" data-act="amfe-abrir">Traer de AMFE</button>`}
       </div>
       ${pegarAbierto ? pegarHtml() : ""}
+      ${traerAbierto && !modoEjemplo ? traerHtml() : ""}
       ${m.riesgos.length > 1 ? `<div class="filtros no-print">
         <label>Ordenar por<select data-filtro="orden"><option value="ipr"${ordenMapa === "ipr" ? " selected" : ""}>Prioridad (IPR)</option><option value="sub"${ordenMapa === "sub" ? " selected" : ""}>Subproceso</option><option value="alta"${ordenMapa === "alta" ? " selected" : ""}>Orden de alta</option></select></label>
         ${subs.length > 1 ? `<label>Subproceso<select data-filtro="sub"><option value="">Todos</option>${subs.map(s => `<option${s === filtroSub ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>` : ""}
@@ -2004,11 +2050,11 @@
     banner.hidden = !modoEjemplo || informe || partes[0] === "ejemplos";
     let navR = partes[0];
     if (partes[0] === "riesgos" && partes[1] === "nuevo") {
-      const m = L.nuevoMapa(genId(), hoy()); borradores.set(m.id, m); abiertos.clear(); pegarAbierto = false;
+      const m = L.nuevoMapa(genId(), hoy()); borradores.set(m.id, m); abiertos.clear(); pegarAbierto = false; traerAbierto = false;
       history.replaceState(null, "", "#/riesgos/" + m.id); renderMapa(m);
     } else if (partes[0] === "riesgos" && partes[1]) {
       const m = buscaMapa(partes[1]) || borradores.get(partes[1]);
-      if (m) { if (!actualMapaPrevio || actualMapaPrevio !== m.id) { abiertos.clear(); pegarAbierto = false; filtroSub = ""; } actualMapaPrevio = m.id; renderMapa(m); }
+      if (m) { if (!actualMapaPrevio || actualMapaPrevio !== m.id) { abiertos.clear(); pegarAbierto = false; traerAbierto = false; filtroSub = ""; } actualMapaPrevio = m.id; renderMapa(m); }
       else noEncontrado("ese Mapa de Riesgos", "#/riesgos", "Ir a mis mapas");
     } else if (partes[0] === "riesgos") renderMapas();
     else if (partes[0] === "plan" && partes[1] === "nuevo") {
@@ -2224,8 +2270,13 @@
       const hacer = () => { r.motivo = L.sugerirMotivo(m, r); tocado(m); const ta = $(`.rg[data-rid="${id}"] [data-f="motivo"]`); if (ta) { ta.value = r.motivo; autoAlto(ta); } };
       if (lleno(r.motivo)) confirmar("<p>Se sustituirá el motivo que has escrito por uno propuesto a partir del IPR y la puntuación.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
     }
-    else if (a === "pegar-abrir") { pegarAbierto = true; repintarMapa(); const ta = $("#pegar-txt"); if (ta) { ta.scrollIntoView({ block: "center" }); ta.focus(); } }
+    else if (a === "pegar-abrir") { pegarAbierto = true; traerAbierto = false; repintarMapa(); const ta = $("#pegar-txt"); if (ta) { ta.scrollIntoView({ block: "center" }); ta.focus(); } }
     else if (a === "pegar-cerrar") { pegarAbierto = false; repintarMapa(); }
+    else if (a === "amfe-abrir") { traerAbierto = true; pegarAbierto = false; repintarTraer(); }
+    else if (a === "amfe-cerrar") { traerAbierto = false; amfeCopia = null; repintarTraer(); }
+    else if (a === "amfe-olvidar") { amfeCopia = null; repintarTraer(); }
+    else if (a === "amfe-archivo") $("#input-amfe").click();
+    else if (a === "amfe-traer") traerAmfe(Number(b.dataset.i));
     else if (a === "pegar-ok" && m) {
       const p = L.parsearTabla($("#pegar-txt").value); if (!p.riesgos.length) return;
       p.riesgos.forEach(x => m.riesgos.push(Object.assign(L.nuevoRiesgo(genId()), x)));
@@ -2500,6 +2551,16 @@
   });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
+  $("#input-amfe").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let o = null; try { o = JSON.parse(fr.result); } catch (er) { /* */ }
+      amfeCopia = L.leerAmfe(o); traerAbierto = true; repintarTraer();
+      if (amfeCopia.error) toast("No se ha importado nada: revisa el aviso.", 4000);
+    };
+    fr.readAsText(f);
+  });
   $("#input-ind").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
     const fr = new FileReader();

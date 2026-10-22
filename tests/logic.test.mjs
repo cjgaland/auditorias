@@ -331,5 +331,39 @@ t("Word del plan de mejora", new TextDecoder().decode(D.construirDocx(dPM)).incl
 t("Informe del seguimiento con comparación", new TextDecoder().decode(D.construirDocx(L.documentoInforme(ejS, null, null, "x", ejO))).includes("Comparación con la auditoría inicial"));
 t("Excel del plan de mejora", X.construirLibroXlsx(L.hojasExcelMejora(ejO, "x", "2026-10-21")).length > 1000);
 
+// Traer de AMFE (paquete «amfe-fallos» v1)
+const paqAmfe = { formato: "amfe-fallos", version: 1, app: "amfe", appVersion: "2026.05", generado: "2026-10-22T08:00:00.000Z", amfes: [{
+  id: "a1", titulo: "Triaje en Urgencias", proceso: "Desde la llegada hasta el triaje", unidad: "Urgencias", fecha: "2026-05-12",
+  subprocesos: [{ id: "s2", orden: 2, nombre: "Triaje" }, { id: "s1", orden: 1, nombre: "Admisión" }],
+  fallos: [
+    { id: "f1", num: 1, subproceso: "Admisión", fallo: "Identificación errónea", efecto: "Paciente equivocado", causa: "Sin pulsera", controles: "Pulsera al llegar", g: 9, o: 4, d: 6, ipr: 216, puesto: 2, prioritario: true, motivo: "", critico: true,
+      acciones: [{ que: "Doble identificador", indicador: { nombre: "% de pacientes con pulsera", estandar: "≥ 95 %" } }] },
+    { id: "f2", num: 2, subproceso: "Triaje", fallo: "Triaje sin constantes", efecto: "Infratriaje", causa: "Carga", controles: "", g: 8, o: 6, d: 5, ipr: 240, puesto: 1, prioritario: true, motivo: "Lo pidió el equipo", critico: false,
+      acciones: [{ que: "Recordatorio en la historia", indicador: { nombre: "", estandar: "" } }, { que: "Formación", indicador: { nombre: "% de triajes con constantes", estandar: "≥ 95 %" } }] },
+    { id: "f3", num: 3, subproceso: "Triaje", fallo: "Sin reevaluar", efecto: "", causa: "", controles: "", g: null, o: 3, d: null, ipr: null, puesto: null, prioritario: false, motivo: "", critico: false, acciones: [] }
+  ] }] };
+const lA = L.leerAmfe(paqAmfe);
+eq("AMFE: paquete válido", [lA.error, lA.amfes.length], [undefined, 1]);
+eq("AMFE: también desde la copia .json", L.leerAmfe({ app: "amfe", amfes: [], intercambio: paqAmfe }).amfes.length, 1);
+t("AMFE: formato equivocado", /formato/.test(L.leerAmfe(Object.assign({}, paqAmfe, { formato: "otra-cosa" })).error));
+t("AMFE: versión equivocada", /versión 2/.test(L.leerAmfe(Object.assign({}, paqAmfe, { version: 2 })).error));
+t("AMFE: versión como texto no vale", !!L.leerAmfe(Object.assign({}, paqAmfe, { version: "1" })).error);
+t("AMFE: copia antigua sin paquete", /copia nueva/.test(L.leerAmfe({ app: "amfe", amfes: [] }).error));
+t("AMFE: basura", !!L.leerAmfe(null).error && !!L.leerAmfe([1]).error && !!L.leerAmfe("x").error);
+eq("AMFE: resumen", L.resumenAmfe(lA.amfes[0]), { titulo: "Triaje en Urgencias", unidad: "Urgencias", fecha: "12/05/2026", n: 3, prioritarios: 2 });
+const { mapa: mA, avisos: avA } = L.mapaDesdeAmfe(lA.amfes[0], gid, "2026-10-22T09:00:00.000Z");
+eq("AMFE → mapa: datos", [mA.nombre, mA.unidad, mA.proceso, mA.fecha, mA.subprocesos], ["Triaje en Urgencias", "Urgencias", "Desde la llegada hasta el triaje", "12/05/2026", ["Admisión", "Triaje"]]);
+eq("AMFE → mapa: G·O·D como texto y nulos vacíos", mA.riesgos.map(r => [r.g, r.o, r.d]), [["9", "4", "6"], ["8", "6", "5"], ["", "3", ""]]);
+eq("AMFE → mapa: medidas ← controles y claves", mA.riesgos.map(r => [r.medidas, r.clave]), [["Pulsera al llegar", true], ["", true], ["", false]]);
+eq("AMFE → mapa: riesgo clave crítico", [mA.riesgos[0].accion, mA.riesgos[0].evidencia, mA.riesgos[0].motivo], ["Doble identificador", "% de pacientes con pulsera · ≥ 95 %", "IPR 216 (puesto 2); fallo crítico"]);
+eq("AMFE → mapa: evidencia de la acción con indicador y motivo propio", [mA.riesgos[1].accion, mA.riesgos[1].evidencia, mA.riesgos[1].motivo], ["Recordatorio en la historia", "% de triajes con constantes · ≥ 95 %", "Lo pidió el equipo"]);
+eq("AMFE → mapa: no clave sin acción ni motivo", [mA.riesgos[2].accion, mA.riesgos[2].motivo], ["", ""]);
+t("AMFE → mapa: saneado (ids y fechas)", mA.id && mA.riesgos.every(r => r.id) && mA.creado === "2026-10-22T09:00:00.000Z" && /22\/10\/2026/.test(mA.notas));
+eq("AMFE → mapa: sin avisos", avA, []);
+const muchos = { titulo: "Grande", fallos: Array.from({ length: 450 }, (_, i) => ({ fallo: "F" + i, g: 5, o: 5, d: 5, prioritario: i < 7 })) };
+const gA = L.mapaDesdeAmfe(muchos, gid, "f");
+eq("AMFE → mapa: límite de 400 riesgos y aviso de claves", [gA.mapa.riesgos.length, gA.avisos.length, gA.avisos.some(a => /7 hallazgos clave/.test(a))], [400, 2, true]);
+t("AMFE → mapa: textos raros no rompen", L.mapaDesdeAmfe({ titulo: { x: 1 }, fallos: [null, { fallo: ["x"], g: "<b>" }] }, gid, "f").mapa.riesgos.length === 1);
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);
