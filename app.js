@@ -12,8 +12,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.07";
+  const APP_VERSION = "2026.08";
   const NOVEDADES = [
+    { version: "2026.08", fecha: "Octubre 2026", titulo: "Nueva app hermana: AMFE", cambios: [
+      "Enlace a la nueva app hermana AMFE (Análisis Modal de Fallos y Efectos) en la portada y en «Acerca de»: analiza los fallos de un proceso, puntúa G·O·D e IPR y decide cuáles priorizar."] },
     { version: "2026.07", fecha: "Octubre 2026", titulo: "El método, lo primero del diseño", cambios: [
       "El diseño de cada auditoría empieza ahora por la metodología (población, periodo, fuentes, método, equipo y recursos), porque de ella dependen los indicadores, las evidencias y la muestra.",
       "Explicación fácil de cada elemento del método."] },
@@ -232,6 +234,7 @@
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña y comprueba</b> los indicadores de tu auditoría.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">IPR</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: <b>analiza los fallos de un proceso</b> (G·O·D e IPR) y decide cuáles priorizar antes de auditar.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> nunca escribas en la app nombres de pacientes ni números de historia clínica. Usa códigos (HC-01, HC-02…) y guarda la correspondencia, si la necesitas, en un lugar autorizado de tu centro.")}`;
   }
