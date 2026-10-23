@@ -1,13 +1,13 @@
 # CLAUDE.md — Auditorías
 
-> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Ecosistema Calidad/ECOSISTEMA.md`.
+> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/ECOSISTEMA.md`.
 
-Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo y el plan por entregas están en `/Users/Trabajo/Desktop/Auditorías/Diseño/DISEÑO_SUPERAPLICACION.md` (léelo también al empezar una sesión).
+Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo y el plan por entregas están en `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/Diseño/DISEÑO_SUPERAPLICACION.md` (léelo también al empezar una sesión).
 
 ## 1. Descripción
-PWA estática (sin build, sin dependencias, sin CDN) para **planificar, realizar, informar y hacer el seguimiento de auditorías de calidad y seguridad del paciente**, paso a paso y de forma didáctica, siguiendo el ciclo PDCA. Nace del curso «Auditorías para la Mejora de la Seguridad del Paciente. Del Mapa de Riesgos a la Mejora Continua» (contenido en `/Users/Trabajo/Desktop/Auditorías/Curso Auditorías`), para que el alumnado pueda hacer solo una auditoría real después del curso. Herramienta docente y de apoyo; no sustituye el criterio profesional.
+PWA estática (sin build, sin dependencias, sin CDN) para **planificar, realizar, informar y hacer el seguimiento de auditorías de calidad y seguridad del paciente**, paso a paso y de forma didáctica, siguiendo el ciclo PDCA. Nace del curso «Auditorías para la Mejora de la Seguridad del Paciente. Del Mapa de Riesgos a la Mejora Continua» (contenido en `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/Curso Auditorías`), para que el alumnado pueda hacer solo una auditoría real después del curso. Herramienta docente y de apoyo; no sustituye el criterio profesional.
 
-Hermana de **Indicadores** (`/Users/Trabajo/Desktop/Indicadores/Aplicación/`) y **Tamaño Muestral** (`/Users/Trabajo/Desktop/Tamaño Muestral/Aplicación/`): mismos tokens CSS, modo claro/oscuro, modales (bienvenida, Acerca de, novedades, confirmar), SW network-first con aviso «Nueva versión disponible», vista de informe imprimible y PDF en iOS. Es **autónoma** (incluirá lo esencial de indicadores y muestra) pero enlaza a las dos.
+Hermana de **Indicadores** (`/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Indicadores/Aplicación/`) y **Tamaño Muestral** (`/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Tamaño Muestral/Aplicación/`): mismos tokens CSS, modo claro/oscuro, modales (bienvenida, Acerca de, novedades, confirmar), SW network-first con aviso «Nueva versión disponible», vista de informe imprimible y PDF en iOS. Es **autónoma** (incluirá lo esencial de indicadores y muestra) pero enlaza a las dos.
 
 Autoría (idéntica en el pie de index.html, «Acerca de», `informePie()` en app.js y el README; orden alfabético, sin centro de trabajo): Carlos J. Galán Doval (Médico de Familia · Técnico en Calidad y Seguridad del Paciente) y Rafael J. Romero de Castilla Gil (Médico de Familia · Responsable del Área de Calidad y Seguridad del Paciente), Área de Gestión Sanitaria Sur de Córdoba · Andalucía.
 
@@ -48,7 +48,7 @@ Autoría (idéntica en el pie de index.html, «Acerca de», `informePie()` en ap
 
 ## 4. Entorno y pruebas
 - Node v26 (Homebrew). `node tests/logic.test.mjs`.
-- Servir en local: el panel de vista previa NO puede arrancar el servidor (sin permiso para leer el Escritorio). Arrancarlo desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/Auditorías/Aplicación" && python3 -m http.server 8767`, y abrir la vista previa `app-auditorias` de `/Users/Trabajo/Desktop/Auditorías/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
+- Servir en local: el panel de vista previa NO puede arrancar el servidor (sin permiso para leer el Escritorio). Arrancarlo desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/Aplicación" && python3 -m http.server 8767`, y abrir la vista previa `app-auditorias` de `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
 - Revisar siempre en escritorio y en móvil (360 px): sin scroll horizontal (`document.documentElement.scrollWidth === 360`), y en modo oscuro.
 
 ## 5. Versiones
@@ -57,15 +57,15 @@ Autoría (idéntica en el pie de index.html, «Acerca de», `informePie()` en ap
 ## 6. Copias de seguridad locales
 Estructura de la carpeta del proyecto (desde 2026-10-21):
 ```
-Desktop/Auditorías/
+Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/
 ├── Aplicación/            ← la app (este repositorio git, lo que se publica)
 ├── Backup/                ← 5 copias más recientes, fuera del repositorio
 ├── Curso Auditorías/      ← material del curso (fuente de contenidos)
 ├── Diseño/                ← DISEÑO_SUPERAPLICACION.md
 └── Documentos de ejemplo/ ← los Word del ejemplo de Urgencias generados con la app
 ```
-Copias de seguridad en `Desktop/Auditorías/Backup/`, con las 5 más recientes:
-`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/Auditorías" --name Auditorias --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (con comodín: los nombres con tilde que crea el Finder no casan si se escriben tal cual) (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
+Copias de seguridad en `Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías/Backup/`, con las 5 más recientes:
+`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Auditorías" --name Auditorias --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (con comodín: los nombres con tilde que crea el Finder no casan si se escriben tal cual) (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
 
 ## 7. Publicación
 Publicada el 2026-10-21 (v2026.06) con permiso del autor: repositorio público `cjgaland/auditorias`, GitHub Pages desde `main` (raíz): https://cjgaland.github.io/auditorias/. Enlazada desde Indicadores (v2026.04) y Tamaño Muestral (v2026.14). Enlaza a AMFE (https://cjgaland.github.io/amfe/, `L.URL_AMFE`) desde la portada y «Acerca de» desde v2026.08. «Traer de AMFE» en el Mapa de Riesgos desde v2026.09 (publicada el 2026-10-22). Enlaza a Flujograma (https://cjgaland.github.io/flujograma/, `L.URL_FLUJO`) y a DAFO · CAME (https://cjgaland.github.io/dafo/, `L.URL_DAFO`) desde la portada y «Acerca de» desde v2026.10 (aún sin «Traer de DAFO»). Enlaza a Mapa de Riesgos (https://cjgaland.github.io/mapa-riesgos/, `L.URL_MAPA`) y tiene «Traer de Mapa de Riesgos» desde v2026.11 (publicada el 2026-10-23). Cada nueva publicación (push) solo cuando el autor lo pida. Pasos por versión: copia de seguridad; entrada en `NOVEDADES` + `APP_VERSION`; mismos `?v=` en index.html; subir `CACHE_NAME` en sw.js; tests; commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; push.
