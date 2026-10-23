@@ -12,8 +12,12 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.10";
+  const APP_VERSION = "2026.11";
   const NOVEDADES = [
+    { version: "2026.11", fecha: "Octubre 2026", titulo: "Traer de Mapa de Riesgos", cambios: [
+      "Nueva app hermana Mapa de Riesgos (del flujograma al mapa de riesgos de un proceso, con su AMFE), enlazada en la portada y en «Acerca de».",
+      "Nuevo botón «Traer de Mapa de Riesgos» en el Mapa de Riesgos: crea un mapa con los fallos y los hallazgos clave de un mapa hecho en esa app (en este navegador o desde su copia .json), con la acción, el indicador y el motivo ya preparados para auditar.",
+      "Los datos se copian: si el mapa cambia, se vuelve a traer."] },
     { version: "2026.10", fecha: "Octubre 2026", titulo: "Nuevas apps hermanas: Flujograma y DAFO · CAME", cambios: [
       "Enlaces a las nuevas apps hermanas Flujograma (dibuja el flujograma de un proceso con sus puntos críticos) y DAFO · CAME (análisis DAFO de una unidad y plan de acción) en la portada y en «Acerca de»."] },
     { version: "2026.09", fecha: "Octubre 2026", titulo: "Traer de AMFE", cambios: [
@@ -241,6 +245,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña y comprueba</b> los indicadores de tu auditoría.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">IPR</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: <b>analiza los fallos de un proceso</b> (G·O·D e IPR) y decide cuáles priorizar antes de auditar.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">⚠</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>del flujograma al mapa de riesgos</b> del proceso, con su AMFE; tráete aquí sus hallazgos clave.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma del proceso</b> que vas a auditar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO; sus debilidades y amenazas te dicen qué conviene auditar.</div></div><span class="guide-go">›</span></a>
       </div>
@@ -265,7 +270,7 @@
         <li>Y tres puntuaciones de 1 a 10: <b>Gravedad</b> (G), <b>Ocurrencia</b> (O) y <b>Detección</b> (D).</li></ul>
         <div class="formula">IPR = G × O × D (de 1 a 1.000)</div>
         <p>Cuanto más alto el <b>Índice de Prioridad de Riesgo</b>, antes conviene actuar… y auditar. Los riesgos que eliges para auditar son tus <b>hallazgos clave</b>.</p>`)}
-      <div class="toolbar no-print"><a class="btn btn--primary" href="#/riesgos/nuevo">+ Nuevo mapa</a><button class="btn" data-act="amfe-abrir">Traer de AMFE</button><a class="btn" href="#/riesgos/ej-mapa-urg">Ver un ejemplo</a></div>
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/riesgos/nuevo">+ Nuevo mapa</a><button class="btn" data-act="amfe-abrir">Traer de AMFE</button><button class="btn" data-act="amfe-abrir" data-fuente="mr">Traer de Mapa de Riesgos</button><a class="btn" href="#/riesgos/ej-mapa-urg">Ver un ejemplo</a></div>
       ${traerAbierto ? traerHtml() : ""}
       ${lista.length ? `<div class="cuadro-lista">${lista.map(tarjetaMapa).join("")}</div>`
         : `<div class="placeholder-box"><p><b>Todavía no tienes ningún mapa.</b></p><p>Crea uno nuevo y escribe los fallos de tu proceso, o pega la tabla de un AMFE que ya tengas en Excel. Si quieres ver antes cómo queda, abre el ejemplo de Urgencias.</p></div>`}`;
@@ -372,29 +377,36 @@
     </div>`;
   }
 
-  // «Traer de AMFE»: lee el paquete «amfe-fallos» que deja la app AMFE en este navegador (mismo dominio) o su copia .json
+  // «Traer de AMFE» y «Traer de Mapa de Riesgos»: leen el paquete que deja cada app en este navegador (mismo dominio) o su
+  // copia .json. Las dos acaban en L.mapaDesdeAmfe (el paquete de Mapa de Riesgos lleva dentro un AMFE con la forma de «amfe-fallos»).
+  // traerAbierto = false | "amfe" | "mr"
+  const FUENTES = {
+    amfe: { nom: "AMFE", titulo: "Traer un AMFE", clave: "amfe-intercambio", leer: o => L.leerAmfe(o), url: () => L.URL_AMFE, cosa: "el AMFE", propio: "ningún AMFE propio" },
+    mr: { nom: "Mapa de Riesgos", titulo: "Traer de Mapa de Riesgos", clave: "mapariesgos-intercambio", leer: o => L.leerMapaRiesgos(o), url: () => L.URL_MAPA, cosa: "el mapa", propio: "ningún mapa propio con AMFE" }
+  };
   function amfeDisponible() {
+    const F = FUENTES[traerAbierto] || FUENTES.amfe;
     if (amfeCopia) return Object.assign({ origen: "copia" }, amfeCopia);
-    const bruto = leer("amfe-intercambio");
+    const bruto = leer(F.clave);
     if (!bruto) return { origen: "nada" };
     let o = null; try { o = JSON.parse(bruto); } catch (e) { /* */ }
-    return Object.assign({ origen: "navegador" }, L.leerAmfe(o));
+    return Object.assign({ origen: "navegador" }, F.leer(o));
   }
   function traerHtml() {
-    const d = amfeDisponible(), lista = d.amfes || [];
-    const cargar = `<button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="amfe-archivo">Cargar la copia .json de AMFE</button>`;
+    const F = FUENTES[traerAbierto] || FUENTES.amfe, d = amfeDisponible(), lista = d.amfes || [];
+    const cargar = `<button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="amfe-archivo">Cargar la copia .json de ${F.nom}</button>`;
     let cuerpo;
-    if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de AMFE en este navegador. Si has hecho el AMFE en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no lo tienes, hazlo en la app <a href="${L.URL_AMFE}" target="_blank" rel="noopener">AMFE ↗</a>.</div>`;
+    if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de ${F.nom} en este navegador. Si has hecho ${F.cosa} en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no lo tienes, hazlo en la app <a href="${F.url()}" target="_blank" rel="noopener">${F.nom} ↗</a>.</div>`;
     else if (d.error) cuerpo = avisoHtml({ nivel: "error", texto: d.error });
-    else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : "La app AMFE de este navegador"} no tiene ningún AMFE propio todavía (los ejemplos no se comparten).</div>`;
-    else cuerpo = `<p class="field-sub">${d.origen === "copia" ? "De la copia cargada" : "Guardados en la app AMFE de este navegador"}${d.generado ? ` · actualizados el ${esc(fechaCorta(d.generado))}` : ""}. Elige cuál traer:</p>
+    else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : `La app ${F.nom} de este navegador`} no tiene ${F.propio} todavía (los ejemplos no se comparten).</div>`;
+    else cuerpo = `<p class="field-sub">${d.origen === "copia" ? "De la copia cargada" : `Guardados en la app ${F.nom} de este navegador`}${d.generado ? ` · actualizados el ${esc(fechaCorta(d.generado))}` : ""}. Elige cuál traer:</p>
       <div class="amfe-lista">${lista.map((a, i) => { const r = L.resumenAmfe(a); return `<div class="amfe-op">
         <div class="amfe-op-txt"><b>${esc(r.titulo)}</b><span>${esc([r.unidad, r.fecha].filter(lleno).join(" · ")) || "&nbsp;"}</span>
         <span class="badges"><span class="badge">${plural(r.n, "fallo", "fallos")}</span>${r.prioritarios ? `<span class="badge badge--clave">★ ${plural(r.prioritarios, "prioritario", "prioritarios")}</span>` : ""}</span></div>
         <button class="btn btn--primary" data-act="amfe-traer" data-i="${i}">Traer este</button></div>`; }).join("")}</div>`;
     return `<div class="card pegar no-print" data-zona="traer">
-      <h3 class="sub-h">Traer un AMFE</h3>
-      <p class="field-sub">Se crea un <b>mapa nuevo</b> con los fallos, sus G·O·D y las medidas actuales; los fallos prioritarios quedan como hallazgos clave. Los datos <b>se copian</b>: si después cambian en AMFE, vuelve a traerlo.</p>
+      <h3 class="sub-h">${F.titulo}</h3>
+      <p class="field-sub">Se crea un <b>mapa nuevo</b> con los fallos, sus G·O·D y las medidas actuales; los fallos prioritarios quedan como hallazgos clave. Los datos <b>se copian</b>: si después cambian en ${F.nom}, vuelve a traerlos.</p>
       ${cuerpo}
       <div class="toolbar">${cargar}${d.origen === "copia" ? `<button class="btn" data-act="amfe-olvidar">Usar los de este navegador</button>` : ""}<button class="btn" data-act="amfe-cerrar">Cancelar</button></div>
     </div>`;
@@ -405,7 +417,7 @@
   }
   function traerAmfe(i) {
     const d = amfeDisponible(), a = d.amfes && d.amfes[i]; if (!a) return;
-    const { mapa, avisos } = L.mapaDesdeAmfe(a, genId, hoy());
+    const { mapa, avisos } = L.mapaDesdeAmfe(a, genId, hoy(), d.app || (FUENTES[traerAbierto] || FUENTES.amfe).nom);
     datosUsuario.mapas.push(mapa); traerAbierto = false; amfeCopia = null; guardar(true);
     location.hash = "#/riesgos/" + mapa.id;
     toast(`Mapa creado con ${plural(mapa.riesgos.length, "riesgo", "riesgos")}${avisos.length ? ". " + avisos.join(" ") : ". Revisa los hallazgos clave."}`, avisos.length ? 8000 : 4500);
@@ -446,7 +458,7 @@
       <div class="toolbar no-print">
         <button class="btn btn--primary" data-act="rg-add">+ Añadir riesgo</button>
         <button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>
-        ${modoEjemplo ? "" : `<button class="btn" data-act="amfe-abrir">Traer de AMFE</button>`}
+        ${modoEjemplo ? "" : `<button class="btn" data-act="amfe-abrir">Traer de AMFE</button><button class="btn" data-act="amfe-abrir" data-fuente="mr">Traer de Mapa de Riesgos</button>`}
       </div>
       ${pegarAbierto ? pegarHtml() : ""}
       ${traerAbierto && !modoEjemplo ? traerHtml() : ""}
@@ -2276,7 +2288,7 @@
     }
     else if (a === "pegar-abrir") { pegarAbierto = true; traerAbierto = false; repintarMapa(); const ta = $("#pegar-txt"); if (ta) { ta.scrollIntoView({ block: "center" }); ta.focus(); } }
     else if (a === "pegar-cerrar") { pegarAbierto = false; repintarMapa(); }
-    else if (a === "amfe-abrir") { traerAbierto = true; pegarAbierto = false; repintarTraer(); }
+    else if (a === "amfe-abrir") { traerAbierto = b.dataset.fuente === "mr" ? "mr" : "amfe"; amfeCopia = null; pegarAbierto = false; repintarTraer(); }
     else if (a === "amfe-cerrar") { traerAbierto = false; amfeCopia = null; repintarTraer(); }
     else if (a === "amfe-olvidar") { amfeCopia = null; repintarTraer(); }
     else if (a === "amfe-archivo") $("#input-amfe").click();
@@ -2560,7 +2572,8 @@
     const fr = new FileReader();
     fr.onload = () => {
       let o = null; try { o = JSON.parse(fr.result); } catch (er) { /* */ }
-      amfeCopia = L.leerAmfe(o); traerAbierto = true; repintarTraer();
+      if (!traerAbierto) traerAbierto = "amfe";
+      amfeCopia = FUENTES[traerAbierto].leer(o); repintarTraer();
       if (amfeCopia.error) toast("No se ha importado nada: revisa el aviso.", 4000);
     };
     fr.readAsText(f);

@@ -365,5 +365,25 @@ const gA = L.mapaDesdeAmfe(muchos, gid, "f");
 eq("AMFE → mapa: límite de 400 riesgos y aviso de claves", [gA.mapa.riesgos.length, gA.avisos.length, gA.avisos.some(a => /7 hallazgos clave/.test(a))], [400, 2, true]);
 t("AMFE → mapa: textos raros no rompen", L.mapaDesdeAmfe({ titulo: { x: 1 }, fallos: [null, { fallo: ["x"], g: "<b>" }] }, gid, "f").mapa.riesgos.length === 1);
 
+// Traer de Mapa de Riesgos (paquete «mapariesgos-mapas» v1: cada mapa lleva un AMFE con la forma de «amfe-fallos» y sus hallazgos)
+const aMR = JSON.parse(JSON.stringify(paqAmfe.amfes[0]));
+const paqMR = { formato: "mapariesgos-mapas", version: 1, app: "mapariesgos", appVersion: "2026.05", generado: "2026-10-23T08:00:00.000Z", mapas: [
+  { id: "m1", titulo: "Triaje", amfe: aMR, flujo: null, hallazgos: [{ num: 2, falloId: "f2", fallo: "Triaje sin constantes", accion: "Checklist de constantes", indicador: "% de triajes con TA y FC · ≥ 95 %", frecuencia: "trimestral", motivo: "" },
+    { num: 1, falloId: "f1", accion: "", indicador: "", motivo: "IPR 216 (puesto 2 de 3 en el mapa); gravedad alta" }] },
+  { id: "m2", titulo: "Sin AMFE", amfe: null, flujo: null, hallazgos: [] }] };
+const lM = L.leerMapaRiesgos(paqMR);
+eq("Mapa de Riesgos: paquete válido (solo mapas con AMFE)", [lM.error, lM.amfes.length, lM.app], [undefined, 1, "Mapa de Riesgos"]);
+eq("Mapa de Riesgos: desde su copia .json", L.leerMapaRiesgos({ app: "mapariesgos", mapas: [], intercambio: paqMR }).amfes.length, 1);
+eq("Mapa de Riesgos: el archivo de «Llevar a Auditorías» (amfe-fallos)", L.leerMapaRiesgos({ app: "mapariesgos", intercambio: paqAmfe }).amfes.length, 1);
+eq("AMFE: también entiende el paquete de Mapa de Riesgos", L.leerAmfe(paqMR).amfes.length, 1);
+t("Mapa de Riesgos: formato equivocado", /formato/.test(L.leerMapaRiesgos(Object.assign({}, paqMR, { formato: "x" })).error));
+t("Mapa de Riesgos: versión equivocada", /versión 2/.test(L.leerMapaRiesgos(Object.assign({}, paqMR, { version: 2 })).error));
+t("Mapa de Riesgos: copia antigua sin paquete", /copia nueva/.test(L.leerMapaRiesgos({ app: "mapariesgos", mapas: [] }).error));
+t("Mapa de Riesgos: basura", !!L.leerMapaRiesgos(null).error && !!L.leerMapaRiesgos("x").error);
+const { mapa: mM } = L.mapaDesdeAmfe(lM.amfes[0], gid, "2026-10-23T09:00:00.000Z", "Mapa de Riesgos");
+eq("Mapa de Riesgos → mapa: el hallazgo manda", [mM.riesgos[1].accion, mM.riesgos[1].evidencia, mM.riesgos[1].motivo], ["Checklist de constantes", "% de triajes con TA y FC · ≥ 95 %", "Lo pidió el equipo"]);
+eq("Mapa de Riesgos → mapa: hallazgo con campos vacíos no borra; su motivo si AMFE no trae", [mM.riesgos[0].accion, mM.riesgos[0].evidencia, mM.riesgos[0].motivo], ["Doble identificador", "% de pacientes con pulsera · ≥ 95 %", "Fallo crítico. IPR 216 (puesto 2 de 3 en el mapa); gravedad alta"]);
+t("Mapa de Riesgos → mapa: nota de origen", /app Mapa de Riesgos/.test(mM.notas) && mM.riesgos.length === 3);
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);

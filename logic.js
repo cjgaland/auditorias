@@ -14,6 +14,7 @@
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
   const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
   const URL_DAFO = "https://cjgaland.github.io/dafo/";
+  const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1351,11 +1352,28 @@
     if (o && typeof o === "object" && o.intercambio !== undefined) o = o.intercambio;
     else if (o && typeof o === "object" && o.app === "amfe" && o.formato === undefined && Array.isArray(o.amfes)) return { error: "Esta copia de AMFE no trae los fallos preparados para otras apps. Ábrela en la versión actual de AMFE, haz una copia nueva y vuelve a intentarlo." };
     if (!o || typeof o !== "object" || Array.isArray(o)) return { error: "No se reconocen datos de AMFE. Usa la copia de seguridad (.json) que descarga la app AMFE." };
+    if (o.formato === FORMATO_MR) return leerMapaRiesgos(o);
     if (o.formato !== FORMATO_AMFE) return { error: `No son datos de AMFE (formato «${txt(o.formato, 40) || "desconocido"}»; se espera «${FORMATO_AMFE}»). No se ha importado nada.` };
     if (o.version !== VERSION_AMFE) return { error: `Los datos de AMFE vienen en la versión ${txt(o.version, 10) || "?"} del formato y esta versión de Auditorías lee la ${VERSION_AMFE}. Actualiza las dos apps (recarga la página) y vuelve a intentarlo. No se ha importado nada.` };
     if (!Array.isArray(o.amfes)) return { error: "El paquete de AMFE no trae ninguna lista de AMFE. No se ha importado nada." };
     const amfes = o.amfes.filter(x => x && typeof x === "object" && !Array.isArray(x) && Array.isArray(x.fallos)).slice(0, 200);
     return { amfes, generado: txt(o.generado, 40), appVersion: txt(o.appVersion, 20) };
+  }
+  // Traer de Mapa de Riesgos: paquete «mapariesgos-mapas» v1 (localStorage["mapariesgos-intercambio"] o la copia .json de
+  // Mapa de Riesgos, clave «intercambio»). Cada mapa lleva un bloque `amfe` con la forma de «amfe-fallos» v1 y sus `hallazgos`.
+  // Devuelve lo mismo que leerAmfe ({ amfes } o { error }), con los hallazgos colgados de cada AMFE.
+  const FORMATO_MR = "mapariesgos-mapas", VERSION_MR = 1;
+  function leerMapaRiesgos(o) {
+    if (o && typeof o === "object" && o.intercambio !== undefined) o = o.intercambio;
+    else if (o && typeof o === "object" && o.app === "mapariesgos" && o.formato === undefined && Array.isArray(o.mapas)) return { error: "Esta copia de Mapa de Riesgos no trae los mapas preparados para otras apps. Ábrela en la versión actual de Mapa de Riesgos, haz una copia nueva y vuelve a intentarlo." };
+    if (o && typeof o === "object" && o.formato === FORMATO_AMFE) return leerAmfe(o); // el archivo de «Llevar a Auditorías»
+    if (!o || typeof o !== "object" || Array.isArray(o)) return { error: "No se reconocen datos de Mapa de Riesgos. Usa la copia de seguridad (.json) que descarga la app Mapa de Riesgos." };
+    if (o.formato !== FORMATO_MR) return { error: `No son datos de Mapa de Riesgos (formato «${txt(o.formato, 40) || "desconocido"}»; se espera «${FORMATO_MR}»). No se ha importado nada.` };
+    if (o.version !== VERSION_MR) return { error: `Los datos de Mapa de Riesgos vienen en la versión ${txt(o.version, 10) || "?"} del formato y esta versión de Auditorías lee la ${VERSION_MR}. Actualiza las dos apps (recarga la página) y vuelve a intentarlo. No se ha importado nada.` };
+    if (!Array.isArray(o.mapas)) return { error: "El paquete de Mapa de Riesgos no trae ninguna lista de mapas. No se ha importado nada." };
+    const amfes = o.mapas.filter(x => x && typeof x === "object" && x.amfe && typeof x.amfe === "object" && Array.isArray(x.amfe.fallos)).slice(0, 200)
+      .map(x => Object.assign({}, x.amfe, { titulo: x.amfe.titulo || x.titulo, hallazgos: Array.isArray(x.hallazgos) ? x.hallazgos : [] }));
+    return { amfes, generado: txt(o.generado, 40), appVersion: txt(o.appVersion, 20), app: "Mapa de Riesgos" };
   }
   // Lo que se enseña en la lista para elegir
   function resumenAmfe(a) {
@@ -1363,11 +1381,12 @@
     return { titulo: txt(a.titulo, 200) || txt(a.proceso, 200) || "AMFE sin título", unidad: txt(a.unidad, 200), fecha: fmtFecha(txt(a.fecha, 40)), n: fs.length, prioritarios: fs.filter(f => f.prioritario === true).length };
   }
   // Un AMFE del paquete → un mapa nuevo (pasa por sanearDatos). Devuelve { mapa, avisos }
-  function mapaDesdeAmfe(a, genId, fecha) {
+  function mapaDesdeAmfe(a, genId, fecha, app = "AMFE") {
     const t = v => txt(v, 2000), god = v => v == null ? "" : txt(v, 3);
     const fs = (Array.isArray(a.fallos) ? a.fallos : []).filter(f => f && typeof f === "object");
     const subs = (Array.isArray(a.subprocesos) ? a.subprocesos : []).filter(s => s && typeof s === "object")
       .map((s, i) => ({ o: Number.isFinite(s.orden) ? s.orden : i + 1, i, nombre: t(s.nombre).trim() })).sort((x, y) => x.o - y.o || x.i - y.i).map(s => s.nombre).filter(Boolean);
+    const H = (Array.isArray(a.hallazgos) ? a.hallazgos : []).filter(h => h && typeof h === "object");
     const riesgos = fs.map(f => {
       const r = { subproceso: t(f.subproceso), fallo: t(f.fallo), efecto: t(f.efecto), causa: t(f.causa), g: god(f.g), o: god(f.o), d: god(f.d), medidas: t(f.controles), clave: f.prioritario === true, accion: "", evidencia: "", motivo: "" };
       if (r.clave) {
@@ -1378,12 +1397,19 @@
         const mot = t(f.motivo).trim(), v = ipr(f.g, f.o, f.d);
         if (mot) r.motivo = f.critico === true && !/cr[ií]tico/i.test(mot) ? "Fallo crítico. " + mot : mot;
         else r.motivo = [v ? `IPR ${v}${Number.isInteger(f.puesto) ? ` (puesto ${f.puesto})` : ""}` : "", f.critico === true ? "fallo crítico" : ""].filter(Boolean).join("; ");
+        // Si viene de Mapa de Riesgos, su hallazgo manda (acción, indicador y motivo ya preparados para auditar)
+        const h = f.id != null && H.find(x => x.falloId === f.id);
+        if (h) {
+          if (lleno(txt(h.accion, 1000))) r.accion = t(h.accion);
+          if (lleno(txt(h.indicador, 1000))) r.evidencia = t(h.indicador);
+          if (!mot && lleno(txt(h.motivo, 1000))) r.motivo = (f.critico === true ? "Fallo crítico. " : "") + t(h.motivo).trim();
+        }
       }
       return r;
     });
     const titulo = t(a.titulo) || t(a.proceso);
     const bruto = { id: genId(), nombre: titulo, unidad: t(a.unidad), proceso: t(a.proceso), fecha: fmtFecha(txt(a.fecha, 40)),
-      notas: `Traído de la app AMFE el ${fmtFecha(String(fecha).slice(0, 10))}. Es una copia: si el AMFE cambia, vuelve a traerlo.`, subprocesos: subs, riesgos, creado: fecha, modificado: fecha };
+      notas: `Traído de la app ${app} el ${fmtFecha(String(fecha).slice(0, 10))}. Es una copia: si el ${app === "AMFE" ? "AMFE" : "mapa"} cambia, vuelve a traerlo.`, subprocesos: subs, riesgos, creado: fecha, modificado: fecha };
     const mapa = sanearDatos({ mapas: [bruto] }, genId, fecha).mapas[0];
     const avisos = [], claves = mapa.riesgos.filter(r => r.clave).length, max = ESQ.mapa.riesgos.max;
     if (!fs.length) avisos.push("Este AMFE no tiene fallos escritos: el mapa se crea vacío.");
@@ -1422,7 +1448,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
+    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
@@ -1436,7 +1462,7 @@
     fmtFecha, sinArticulo, HITOS, nuevosHitos, nuevoControl, nuevaPersona, FRECUENCIAS, TIPOS_ENTRADA, TIPOS_CRITERIO, MESES, MESES_LARGO,
     nuevoPlan, nuevaEntrada, riesgosDeEntrada, hallazgosDeEntrada, prioridadEntrada, frecuenciaSugerida, rondas, cargaMensual, capacidadDe, textoMeses,
     repartir, avisosPlan, progresoPlan, entradasDesdeMapa, documentoPlan, documentoMapa, documentoPlanEspecifico, documentoHoja, hojasExcelPlan,
-    sanear, sanearDatos, fusionar, hojasExcelMapa, FORMATO_AMFE, VERSION_AMFE, leerAmfe, resumenAmfe, mapaDesdeAmfe
+    sanear, sanearDatos, fusionar, hojasExcelMapa, FORMATO_AMFE, VERSION_AMFE, leerAmfe, resumenAmfe, mapaDesdeAmfe, FORMATO_MR, VERSION_MR, leerMapaRiesgos
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API; else raiz.Logica = API;
 })(typeof window !== "undefined" ? window : globalThis);
