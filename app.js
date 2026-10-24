@@ -12,8 +12,13 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.11";
+  const APP_VERSION = "2026.12";
   const NOVEDADES = [
+    { version: "2026.12", fecha: "Octubre 2026", titulo: "Traer de Rondas de Seguridad", cambios: [
+      "Nueva app hermana Rondas de Seguridad (las rondas de seguridad de una unidad, a pie de cama), enlazada en la portada y en «Acerca de».",
+      "Nuevo botón «Traer de Rondas de Seguridad» en «Mis auditorías» y en el paso 1 del Plan Anual: trae los puntos calientes de tus rondas (lo que no se cumple en 2 de las 3 últimas rondas o en todas las de un turno) como criterios de una auditoría nueva o como una auditoría del plan, con su dato. Funciona en este navegador o con la copia .json de Rondas.",
+      "Nuevo origen de una auditoría: «Rondas de seguridad».",
+      "Los datos se copian: si las rondas cambian, se vuelven a traer."] },
     { version: "2026.11", fecha: "Octubre 2026", titulo: "Traer de Mapa de Riesgos", cambios: [
       "Nueva app hermana Mapa de Riesgos (del flujograma al mapa de riesgos de un proceso, con su AMFE), enlazada en la portada y en «Acerca de».",
       "Nuevo botón «Traer de Mapa de Riesgos» en el Mapa de Riesgos: crea un mapa con los fallos y los hallazgos clave de un mapa hecho en esa app (en este navegador o desde su copia .json), con la acción, el indicador y el motivo ya preparados para auditar.",
@@ -248,6 +253,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">⚠</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>del flujograma al mapa de riesgos</b> del proceso, con su AMFE; tráete aquí sus hallazgos clave.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma del proceso</b> que vas a auditar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO; sus debilidades y amenazas te dicen qué conviene auditar.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad; tráete aquí lo que falla una y otra vez para auditarlo.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> nunca escribas en la app nombres de pacientes ni números de historia clínica. Usa códigos (HC-01, HC-02…) y guarda la correspondencia, si la necesitas, en un lugar autorizado de tu centro.")}`;
   }
@@ -423,6 +429,59 @@
     toast(`Mapa creado con ${plural(mapa.riesgos.length, "riesgo", "riesgos")}${avisos.length ? ". " + avisos.join(" ") : ". Revisa los hallazgos clave."}`, avisos.length ? 8000 : 4500);
   }
 
+  // «Traer de Rondas de Seguridad»: lee el paquete «rondas-seguridad» v1 que deja esa app en este navegador o su copia .json.
+  // rondasAbierto = false | "aud" (crea una auditoría) | "plan" (añade una entrada al plan). rondasFuera = puntos desmarcados.
+  let rondasAbierto = false, rondasHash = "", rondasCopia = null;
+  const rondasFuera = new Set();
+  function rondasDisponible() {
+    if (rondasCopia) return Object.assign({ origen: "copia" }, rondasCopia);
+    const bruto = leer("rondas-intercambio");
+    if (!bruto) return { origen: "nada" };
+    let o = null; try { o = JSON.parse(bruto); } catch (e) { /* */ }
+    return Object.assign({ origen: "navegador" }, L.leerRondas(o));
+  }
+  const rondasIds = u => u.calientes.filter(p => !rondasFuera.has(u.id + "|" + p.itemId)).map(p => p.itemId);
+  function rondasHtml() {
+    const d = rondasDisponible(), lista = d.unidades || [], conPC = lista.filter(u => u.calientes.length), sinPC = lista.filter(u => !u.calientes.length);
+    const aud = rondasAbierto === "aud";
+    let cuerpo;
+    if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de Rondas de Seguridad en este navegador. Si haces las rondas en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no la usas, la tienes en <a href="${L.URL_RONDAS}" target="_blank" rel="noopener">Rondas de Seguridad ↗</a>.</div>`;
+    else if (d.error) cuerpo = avisoHtml({ nivel: "error", texto: d.error });
+    else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : "La app Rondas de Seguridad de este navegador"} no tiene ninguna unidad propia todavía (los ejemplos no se comparten).</div>`;
+    else if (!conPC.length) cuerpo = `<div class="note">ℹ Ninguna unidad tiene puntos calientes: ningún ítem falla en dos de las tres últimas rondas ni en todas las de un mismo turno. ¡Buena señal! (${esc(lista.map(u => u.unidad || "Unidad sin nombre").join(", "))}).</div>`;
+    else cuerpo = `<p class="field-sub">${d.origen === "copia" ? "De la copia cargada" : "Guardados en la app Rondas de Seguridad de este navegador"}${d.generado ? ` · actualizados el ${esc(fechaCorta(d.generado))}` : ""}. Desmarca lo que no quieras traer:</p>
+      <div class="amfe-lista">${conPC.map(u => { const i = lista.indexOf(u), n = rondasIds(u).length; return `<div class="amfe-op amfe-op--rondas">
+        <div class="amfe-op-txt"><b>${esc(u.unidad || "Unidad sin nombre")}</b><span>${plural(u.rondas, "ronda hecha", "rondas hechas")}${u.ultima ? ` · la última el ${esc(L.fmtFecha(u.ultima))}` : ""}</span>
+          <div class="aud-rgs">${u.calientes.map(p => { const on = !rondasFuera.has(u.id + "|" + p.itemId); return `<button type="button" class="aud-rg${on ? " on" : ""}" data-act="rondas-pt" data-k="${esc(u.id + "|" + p.itemId)}" aria-pressed="${on}"><span class="aud-check">${on ? "✓" : ""}</span><span class="aud-rg-t"><b>${esc(p.texto)}</b><span>${esc([p.bloque, L.datoCaliente(p)].filter(lleno).join(" · "))}</span></span></button>`; }).join("")}</div></div>
+        <button class="btn btn--primary" data-act="rondas-traer" data-i="${i}"${n ? "" : " disabled"}>${aud ? "Crear la auditoría" : "Añadir al plan"}</button></div>`; }).join("")}</div>
+      ${sinPC.length ? `<p class="field-sub">Sin puntos calientes: ${esc(sinPC.map(u => u.unidad || "Unidad sin nombre").join(", "))}.</p>` : ""}`;
+    return `<div class="card pegar no-print" data-zona="rondas">
+      <h3 class="sub-h">Traer de Rondas de Seguridad</h3>
+      <p class="field-sub">Los <b>puntos calientes</b> son lo que falla una y otra vez en las rondas: lo que no se cumple en 2 de las 3 últimas rondas o en todas las de un mismo turno. ${aud ? "Se crea una <b>auditoría nueva</b> con un criterio por cada uno, para comprobar con una muestra si es un problema del proceso." : "Se añade <b>una auditoría al plan</b> por unidad, con sus puntos calientes como hallazgos."} Los datos <b>se copian</b>: si las rondas cambian, vuelve a traerlos.</p>
+      ${cuerpo}
+      <div class="toolbar"><button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="rondas-archivo">Cargar la copia .json de Rondas de Seguridad</button>${d.origen === "copia" ? `<button class="btn" data-act="rondas-olvidar">Usar los de este navegador</button>` : ""}<button class="btn" data-act="rondas-cerrar">Cancelar</button></div>
+    </div>`;
+  }
+  function repintarRondas() {
+    if (rondasAbierto === "plan" && actualPlan) repintarPlan(); else if (location.hash.startsWith("#/auditorias")) renderAuditorias();
+    const z = $("[data-zona='rondas']"); if (z) z.scrollIntoView({ block: "nearest" });
+  }
+  function traerRondas(i) {
+    const d = rondasDisponible(), u = d.unidades && d.unidades[i]; if (!u) return;
+    const ids = rondasIds(u); if (!ids.length) return;
+    if (rondasAbierto === "plan" && actualPlan) {
+      const e = L.entradaDesdeRondas(u, genId, hoy(), ids);
+      actualPlan.entradas.push(e); if (!lleno(actualPlan.ambito) && lleno(u.unidad)) actualPlan.ambito = u.unidad;
+      rondasAbierto = false; rondasCopia = null; rondasFuera.clear(); tocado(actualPlan); repintarPlan();
+      toast(`Añadida al plan una auditoría con ${plural(ids.length, "punto caliente", "puntos calientes")} como hallazgos. Elige su frecuencia en el paso 3.`, 5000);
+      return;
+    }
+    const a = L.auditoriaDesdeRondas(u, genId, hoy(), ids);
+    datosUsuario.auditorias.push(a); rondasAbierto = false; rondasCopia = null; rondasFuera.clear(); guardar(true);
+    location.hash = "#/auditoria/" + a.id;
+    toast(`Auditoría creada con ${plural(a.criterios.length, "criterio", "criterios")}, uno por punto caliente. Completa el proceso y el objetivo.`, 5000);
+  }
+
   function renderMapa(m) {
     actualMapa = m; actualAud = null; nAyuda = 0;
     if (document.body.classList.contains("ver-informe")) { renderMapaInforme(m); return; }
@@ -525,9 +584,10 @@
     view.innerHTML = `
       <h1 class="page-title">Mis auditorías</h1>
       <p class="page-lead">Cada auditoría recorre el ciclo completo: inicio y diseño (Planificar), recogida de datos (Hacer), informe (Verificar) y mejora con seguimiento (Actuar).</p>
-      <div class="toolbar no-print"><a class="btn btn--primary" href="#/auditoria/nueva">+ Nueva auditoría</a><a class="btn" href="#/auditoria/ej-aud-urg">Ver un ejemplo</a></div>
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/auditoria/nueva">+ Nueva auditoría</a><button class="btn" data-act="rondas-abrir" data-modo="aud">Traer de Rondas de Seguridad</button><a class="btn" href="#/auditoria/ej-aud-urg">Ver un ejemplo</a></div>
+      ${rondasAbierto === "aud" ? rondasHtml() : ""}
       ${lista.length ? `<div class="cuadro-lista">${lista.map(tarjetaAud).join("")}</div>`
-        : `<div class="placeholder-box"><p><b>Todavía no tienes ninguna auditoría.</b></p><p>Puedes crearla desde los hallazgos clave de un Mapa de Riesgos o empezar directamente si nace de un estándar, un incidente, un indicador o un encargo.</p></div>`}`;
+        : `<div class="placeholder-box"><p><b>Todavía no tienes ninguna auditoría.</b></p><p>Puedes crearla desde los hallazgos clave de un Mapa de Riesgos, traer lo que falla una y otra vez en tus rondas de seguridad o empezar directamente si nace de un estándar, un incidente, un indicador o un encargo.</p></div>`}`;
   }
   // En qué fase va una auditoría (la primera que no está terminada)
   function faseDe(a) {
@@ -569,7 +629,8 @@
     incidente: "p. ej. Notificación de un error de identificación en Radiología (sin datos del paciente)",
     indicador: "p. ej. «% de pacientes con pulsera identificativa» bajó al 82 % (estándar ≥ 95 %) en el último trimestre",
     seguimiento: "p. ej. Auditoría de higiene de manos de marzo: plan de mejora con reubicación de dispensadores y formación",
-    encargo: "p. ej. Objetivo del acuerdo de gestión de la unidad para este año"
+    encargo: "p. ej. Objetivo del acuerdo de gestión de la unidad para este año",
+    rondas: "p. ej. En las rondas de seguridad de la planta, la pulsera identificativa falla en 2 de las 3 últimas rondas"
   };
 
   function origenHtml(a) {
@@ -803,6 +864,7 @@
         <div class="toolbar"><button class="btn btn--primary" data-act="plan-importar">Añadir al plan</button></div>
         <p class="field-sub">La frecuencia se propone según el IPR de cada grupo. Podrás cambiarla en el paso 3.</p>
       </div>` : `<div class="note">ℹ Si tienes un <a href="#/riesgos">Mapa de Riesgos</a> con hallazgos clave (★), podrás traerlos aquí con un clic.</div>`}
+      ${modoEjemplo ? "" : rondasAbierto === "plan" ? rondasHtml() : `<div class="toolbar no-print"><button class="btn" data-act="rondas-abrir" data-modo="plan">Traer de Rondas de Seguridad</button></div>`}
       <h2 class="sec-t">Auditorías del plan <span class="contador">${p.entradas.length}</span></h2>
       <div data-zona="avisos-plan">${avisosPasoHtml(p, 1)}</div>
       ${p.entradas.map((e, i) => {
@@ -2058,6 +2120,7 @@
     const informe = q.get("informe") === "1";
     document.body.classList.toggle("ver-informe", informe);
     actualMapa = null; actualAud = null; actualPlan = null;
+    if (rondasAbierto && location.hash !== rondasHash) { rondasAbierto = false; rondasCopia = null; rondasFuera.clear(); }
     const idR = partes[1] || "";
     const ej = ejemplos();
     modoEjemplo = partes[0] === "ejemplos" || (esIdEjemplo(idR) && [...ej.mapas, ...ej.auditorias, ...ej.planes].some(x => x.id === idR));
@@ -2293,6 +2356,12 @@
     else if (a === "amfe-olvidar") { amfeCopia = null; repintarTraer(); }
     else if (a === "amfe-archivo") $("#input-amfe").click();
     else if (a === "amfe-traer") traerAmfe(Number(b.dataset.i));
+    else if (a === "rondas-abrir") { rondasAbierto = b.dataset.modo === "plan" ? "plan" : "aud"; rondasHash = location.hash; rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
+    else if (a === "rondas-cerrar") { rondasAbierto = false; rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
+    else if (a === "rondas-olvidar") { rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
+    else if (a === "rondas-archivo") $("#input-rondas").click();
+    else if (a === "rondas-pt") { const k = b.dataset.k; if (rondasFuera.has(k)) rondasFuera.delete(k); else rondasFuera.add(k); repintarRondas(); }
+    else if (a === "rondas-traer") traerRondas(Number(b.dataset.i));
     else if (a === "pegar-ok" && m) {
       const p = L.parsearTabla($("#pegar-txt").value); if (!p.riesgos.length) return;
       p.riesgos.forEach(x => m.riesgos.push(Object.assign(L.nuevoRiesgo(genId()), x)));
@@ -2575,6 +2644,17 @@
       if (!traerAbierto) traerAbierto = "amfe";
       amfeCopia = FUENTES[traerAbierto].leer(o); repintarTraer();
       if (amfeCopia.error) toast("No se ha importado nada: revisa el aviso.", 4000);
+    };
+    fr.readAsText(f);
+  });
+  $("#input-rondas").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let o = null; try { o = JSON.parse(fr.result); } catch (er) { /* */ }
+      if (!rondasAbierto) { rondasAbierto = actualPlan ? "plan" : "aud"; rondasHash = location.hash; }
+      rondasCopia = L.leerRondas(o); rondasFuera.clear(); repintarRondas();
+      if (rondasCopia.error) toast("No se ha importado nada: revisa el aviso.", 4000);
     };
     fr.readAsText(f);
   });

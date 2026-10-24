@@ -15,6 +15,7 @@
   const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
   const URL_DAFO = "https://cjgaland.github.io/dafo/";
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
+  const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -144,6 +145,7 @@
   const ORIGENES = {
     riesgos: { nom: "Mapa de Riesgos", icono: "⚠", q: "Has analizado un proceso (AMFE) y tienes riesgos priorizados por IPR.", por: "verificar si las medidas de control de los riesgos más prioritarios se aplican de verdad" },
     estandar: { nom: "Estándar o norma", icono: "★", q: "Un estándar de acreditación (p. ej. ACSA), una norma ISO o un protocolo obliga a comprobar su cumplimiento.", por: "comprobar el cumplimiento de un estándar o protocolo de referencia" },
+    rondas: { nom: "Rondas de seguridad", icono: "✓", q: "Las rondas de seguridad de una unidad muestran algo que falla una y otra vez.", por: "comprobar con una muestra si lo que se ve fallar en las rondas de seguridad es un problema del proceso y no algo puntual" },
     incidente: { nom: "Incidente o notificación", icono: "!", q: "Un incidente, una notificación o una reclamación ha puesto el foco en un proceso.", por: "comprobar si el fallo detectado en un incidente es puntual o se repite en el proceso" },
     indicador: { nom: "Indicador fuera de objetivo", icono: "▼", q: "Un indicador de tu cuadro de mando no alcanza el estándar o empeora.", por: "averiguar qué está fallando detrás de un indicador que no alcanza su estándar" },
     seguimiento: { nom: "Auditoría anterior", icono: "↻", q: "Quieres comprobar si las mejoras de una auditoría previa han funcionado (auditoría de seguimiento).", por: "verificar la eficacia de las acciones de mejora de una auditoría anterior" },
@@ -1419,6 +1421,56 @@
     return { mapa, avisos };
   }
 
+  // ---------- Traer de Rondas de Seguridad ----------
+  // Paquete «rondas-seguridad» v1 (localStorage["rondas-intercambio"] o la copia .json de Rondas de Seguridad, clave
+  // «intercambio»). De cada unidad interesan sus puntos calientes: lo que no se cumple en 2 de las 3 últimas rondas
+  // («repetido») o en todas las rondas de un turno («turno»). Devuelve { unidades } o { error } (y entonces no se importa nada).
+  const FORMATO_RONDAS = "rondas-seguridad", VERSION_RONDAS = 1;
+  const TURNOS_RONDAS = { manana: "mañana", tarde: "tarde", noche: "noche", finde: "fin de semana" };
+  const objeto = x => x && typeof x === "object" && !Array.isArray(x);
+  const entero = v => Number.isInteger(v) && v >= 0 && v < 10000 ? v : 0;
+  function leerRondas(o) {
+    if (objeto(o) && o.intercambio !== undefined) o = o.intercambio;
+    else if (objeto(o) && o.app === "rondas" && o.formato === undefined && Array.isArray(o.unidades)) return { error: "Esta copia de Rondas de Seguridad no trae los datos preparados para otras apps. Ábrela en la versión actual de Rondas de Seguridad, haz una copia nueva y vuelve a intentarlo." };
+    if (!objeto(o)) return { error: "No se reconocen datos de Rondas de Seguridad. Usa la copia de seguridad (.json) que descarga la app Rondas de Seguridad." };
+    if (o.formato !== FORMATO_RONDAS) return { error: `No son datos de Rondas de Seguridad (formato «${txt(o.formato, 40) || "desconocido"}»; se espera «${FORMATO_RONDAS}»). No se ha importado nada.` };
+    if (o.version !== VERSION_RONDAS) return { error: `Los datos de Rondas de Seguridad vienen en la versión ${txt(o.version, 10) || "?"} del formato y esta versión de Auditorías lee la ${VERSION_RONDAS}. Actualiza las dos apps (recarga la página) y vuelve a intentarlo. No se ha importado nada.` };
+    if (!Array.isArray(o.unidades)) return { error: "El paquete de Rondas de Seguridad no trae ninguna lista de unidades. No se ha importado nada." };
+    const unidades = o.unidades.filter(objeto).slice(0, 200).map((u, i) => {
+      const items = (Array.isArray(u.items) ? u.items : []).filter(objeto);
+      const hechas = (Array.isArray(u.rondas) ? u.rondas : []).filter(r => objeto(r) && r.estado === "hecha");
+      const fechas = hechas.map(r => txt(r.fecha, 10)).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)).sort();
+      const calientes = (Array.isArray(u.puntosCalientes) ? u.puntosCalientes : []).filter(p => objeto(p) && lleno(txt(p.texto, 400))).slice(0, 80).map(p => {
+        const it = items.find(x => x.id === p.itemId) || {}, por = p.por === "turno" && TURNOS_RONDAS[p.turno] ? "turno" : "repetido";
+        return { itemId: txt(p.itemId, 40), texto: txt(p.texto, 400).trim(), bloque: txt(it.bloqueNombre, 100), por, turno: por === "turno" ? p.turno : "", fallos: entero(p.fallos), evaluadas: entero(p.evaluadas) };
+      });
+      return { id: txt(u.id, 40) || "u" + (i + 1), unidad: txt(u.unidad, 200).trim(), rondas: hechas.length, ultima: fechas[fechas.length - 1] || "", calientes };
+    });
+    return { unidades, generado: txt(o.generado, 40), appVersion: txt(o.appVersion, 20) };
+  }
+  // «no se ha cumplido en 2 de las últimas 3 rondas» · «no se ha cumplido en ninguna de las 3 rondas de noche»
+  const datoCaliente = p => p.por === "turno" ? `no se ha cumplido en ninguna de las ${p.evaluadas} rondas de ${TURNOS_RONDAS[p.turno]}` : `no se ha cumplido en ${p.fallos} de las últimas ${p.evaluadas} rondas`;
+  const hallazgoCaliente = p => `«${p.texto.replace(/\.$/, "")}»: ${datoCaliente(p)}.`;
+  const elegidos = (u, ids) => Array.isArray(ids) ? u.calientes.filter(p => ids.includes(p.itemId)) : u.calientes;
+  // «(4 rondas hechas, la última el 12/10/2026). Traído de la app Rondas de Seguridad el … »
+  const textoRondas = (u, fecha) => `(${u.rondas} ${u.rondas === 1 ? "ronda hecha" : "rondas hechas"}${u.ultima ? `, la última el ${fmtFecha(u.ultima)}` : ""}). Traído de la app Rondas de Seguridad el ${fmtFecha(String(fecha).slice(0, 10))}; es una copia: si las rondas cambian, vuelve a traerlo.`;
+  // Una unidad del paquete → auditoría nueva: un criterio por punto caliente (el ítem de la ronda es el criterio que se comprueba)
+  function auditoriaDesdeRondas(u, genId, fecha, ids) {
+    const P = elegidos(u, ids), nom = u.unidad || "la unidad";
+    const bruto = Object.assign(nuevaAuditoria(genId(), fecha), {
+      titulo: `Auditoría interna de lo que falla en las rondas de seguridad · ${sinArticulo(nom)}`, unidad: u.unidad,
+      origen: { tipo: "rondas", mapaId: "", riesgoIds: [], detalle: `En las rondas de seguridad de «${nom}» ${P.length === 1 ? "hay un punto que falla" : "hay " + P.length + " puntos que fallan"} una y otra vez ${textoRondas(u, fecha)}` },
+      criterios: P.map(p => Object.assign(nuevoCriterio(genId()), { subproceso: p.bloque, hallazgo: hallazgoCaliente(p), criterio: p.texto }))
+    });
+    return sanearDatos({ auditorias: [bruto] }, genId, fecha).auditorias[0];
+  }
+  // Una unidad del paquete → entrada del Plan Anual con los puntos calientes como hallazgos (uno por línea)
+  function entradaDesdeRondas(u, genId, fecha, ids) {
+    const P = elegidos(u, ids);
+    return Object.assign(nuevaEntrada(genId()), { titulo: `Lo que falla en las rondas de seguridad · ${sinArticulo(u.unidad || "la unidad")}`, hallazgos: P.map(hallazgoCaliente).join("\n"),
+      observaciones: `Puntos calientes de las rondas de seguridad ${textoRondas(u, fecha)}` });
+  }
+
   // ---------- Excel ----------
   const ESTILOS_XLSX = {
     titulo: { negrita: true, tamano: 14, colorTexto: "FFFFFF", colorFondo: "0B6F66", borde: false },
@@ -1448,7 +1500,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
+    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,
@@ -1462,7 +1514,8 @@
     fmtFecha, sinArticulo, HITOS, nuevosHitos, nuevoControl, nuevaPersona, FRECUENCIAS, TIPOS_ENTRADA, TIPOS_CRITERIO, MESES, MESES_LARGO,
     nuevoPlan, nuevaEntrada, riesgosDeEntrada, hallazgosDeEntrada, prioridadEntrada, frecuenciaSugerida, rondas, cargaMensual, capacidadDe, textoMeses,
     repartir, avisosPlan, progresoPlan, entradasDesdeMapa, documentoPlan, documentoMapa, documentoPlanEspecifico, documentoHoja, hojasExcelPlan,
-    sanear, sanearDatos, fusionar, hojasExcelMapa, FORMATO_AMFE, VERSION_AMFE, leerAmfe, resumenAmfe, mapaDesdeAmfe, FORMATO_MR, VERSION_MR, leerMapaRiesgos
+    sanear, sanearDatos, fusionar, hojasExcelMapa, FORMATO_AMFE, VERSION_AMFE, leerAmfe, resumenAmfe, mapaDesdeAmfe, FORMATO_MR, VERSION_MR, leerMapaRiesgos,
+    FORMATO_RONDAS, VERSION_RONDAS, leerRondas, datoCaliente, hallazgoCaliente, auditoriaDesdeRondas, entradaDesdeRondas
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API; else raiz.Logica = API;
 })(typeof window !== "undefined" ? window : globalThis);

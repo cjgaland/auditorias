@@ -385,5 +385,40 @@ eq("Mapa de Riesgos → mapa: el hallazgo manda", [mM.riesgos[1].accion, mM.ries
 eq("Mapa de Riesgos → mapa: hallazgo con campos vacíos no borra; su motivo si AMFE no trae", [mM.riesgos[0].accion, mM.riesgos[0].evidencia, mM.riesgos[0].motivo], ["Doble identificador", "% de pacientes con pulsera · ≥ 95 %", "Fallo crítico. IPR 216 (puesto 2 de 3 en el mapa); gravedad alta"]);
 t("Mapa de Riesgos → mapa: nota de origen", /app Mapa de Riesgos/.test(mM.notas) && mM.riesgos.length === 3);
 
+// Traer de Rondas de Seguridad (paquete «rondas-seguridad» v1). Se genera con la lógica real de la app Rondas de Seguridad
+// (carpeta hermana ../Rondas de Seguridad/Aplicación) a partir de sus ejemplos, más una unidad hecha a mano con un punto «repetido».
+const RL = require("../../Rondas de Seguridad/Aplicación/logic.js"), RC = require("../../Rondas de Seguridad/Aplicación/contenido.js");
+const unidadesR = RC.EJEMPLOS.unidades.map(u => RL.sanearUnidad(JSON.parse(JSON.stringify(u)), gid, "2026-10-24"));
+const paqR = RL.paqueteIntercambio(unidadesR, "2026.01", "2026-10-24T10:00:00.000Z");
+paqR.unidades.push({ id: "u-mano", unidad: "Planta de Medicina Interna", ambito: "hosp", frecuencia: "mensual",
+  items: [{ id: "id-01", bloque: "id", bloqueNombre: "Identificación del paciente", texto: "Todos los pacientes llevan pulsera legible." }, { id: "med-02", bloque: "med", bloqueNombre: "Medicamentos", texto: "Los medicamentos de alto riesgo están separados." }],
+  rondas: [{ id: "r1", fecha: "2026-08-10", estado: "hecha" }, { id: "r2", fecha: "2026-09-12", estado: "hecha" }, { id: "r3", fecha: "2026-10-11", estado: "hecha" }, { id: "r4", fecha: "2026-11-10", estado: "planificada" }],
+  puntosCalientes: [{ itemId: "id-01", texto: "Todos los pacientes llevan pulsera legible.", bloque: "id", por: "repetido", turno: null, fallos: 2, evaluadas: 3 },
+    { itemId: "med-02", texto: "Los medicamentos de alto riesgo están separados.", bloque: "med", por: "turno", turno: "finde", fallos: 2, evaluadas: 2 },
+    { itemId: "x", texto: "", por: "repetido" }, "basura", null], acciones: [] });
+const lR = L.leerRondas(paqR);
+eq("Rondas: paquete real válido, todas las unidades", [lR.error, lR.unidades.length], [undefined, 6]);
+eq("Rondas: el ejemplo de Urgencias trae su punto caliente de noche", lR.unidades[0].calientes.map(p => [p.itemId, p.por, p.turno, p.fallos, p.evaluadas, p.bloque]), [["cui-08", "turno", "noche", 3, 3, "Cuidados seguros"]]);
+eq("Rondas: solo cuenta las rondas hechas y la última fecha", [lR.unidades[5].rondas, lR.unidades[5].ultima], [3, "2026-10-11"]);
+eq("Rondas: se descartan puntos vacíos o que no son objetos", lR.unidades[5].calientes.length, 2);
+eq("Rondas: desde su copia .json (clave intercambio)", L.leerRondas({ app: "rondas", unidades: [], intercambio: paqR }).unidades.length, 6);
+t("Rondas: formato equivocado", /formato/.test(L.leerRondas(Object.assign({}, paqR, { formato: "amfe-fallos" })).error));
+t("Rondas: versión equivocada", /versión 2/.test(L.leerRondas(Object.assign({}, paqR, { version: 2 })).error));
+t("Rondas: copia antigua sin paquete", /copia nueva/.test(L.leerRondas({ app: "rondas", unidades: [] }).error));
+t("Rondas: basura", !!L.leerRondas(null).error && !!L.leerRondas("x").error && !!L.leerRondas([]).error && !!L.leerRondas(Object.assign({}, paqR, { unidades: "x" })).error);
+eq("Rondas: el dato de cada punto", lR.unidades[5].calientes.map(L.datoCaliente), ["no se ha cumplido en 2 de las últimas 3 rondas", "no se ha cumplido en ninguna de las 2 rondas de fin de semana"]);
+const audR = L.auditoriaDesdeRondas(lR.unidades[5], gid, "2026-10-24T11:00:00.000Z");
+eq("Rondas → auditoría: un criterio por punto caliente, con su bloque", audR.criterios.map(c => [c.subproceso, c.criterio]), [["Identificación del paciente", "Todos los pacientes llevan pulsera legible."], ["Medicamentos", "Los medicamentos de alto riesgo están separados."]]);
+eq("Rondas → auditoría: el hallazgo lleva el dato", audR.criterios[0].hallazgo, "«Todos los pacientes llevan pulsera legible»: no se ha cumplido en 2 de las últimas 3 rondas.");
+eq("Rondas → auditoría: origen, unidad y título", [audR.origen.tipo, audR.unidad, audR.titulo], ["rondas", "Planta de Medicina Interna", "Auditoría interna de lo que falla en las rondas de seguridad · Planta de Medicina Interna"]);
+t("Rondas → auditoría: el origen explica de dónde viene y que es una copia", /2 puntos que fallan/.test(audR.origen.detalle) && /3 rondas hechas, la última el 11\/10\/2026/.test(audR.origen.detalle) && /es una copia/.test(audR.origen.detalle));
+t("Rondas → auditoría: pasa por el saneado (sobrevive a recargar)", JSON.stringify(L.sanearDatos({ auditorias: [audR] }, gid, "x").auditorias[0]) === JSON.stringify(audR));
+t("Rondas → auditoría: el objetivo propuesto usa el origen", /rondas de seguridad/.test(L.sugerirObjetivo(Object.assign({}, audR, { proceso: "la identificación de pacientes" }), null)));
+eq("Rondas → auditoría: solo los puntos elegidos", L.auditoriaDesdeRondas(lR.unidades[5], gid, "2026-10-24", ["med-02"]).criterios.map(c => c.criterio), ["Los medicamentos de alto riesgo están separados."]);
+const entR = L.entradaDesdeRondas(lR.unidades[5], gid, "2026-10-24", ["id-01"]);
+eq("Rondas → Plan Anual: una entrada con sus hallazgos", [entR.titulo, entR.hallazgos, entR.tipo], ["Lo que falla en las rondas de seguridad · Planta de Medicina Interna", "«Todos los pacientes llevan pulsera legible»: no se ha cumplido en 2 de las últimas 3 rondas.", "interna"]);
+t("Rondas → Plan Anual: la entrada pasa el saneado del plan", L.sanearDatos({ planes: [Object.assign(L.nuevoPlan("p1", "x"), { entradas: [entR] })] }, gid, "x").planes[0].entradas[0].hallazgos === entR.hallazgos);
+t("Rondas: origen nuevo en la lista de orígenes", L.ORIGENES.rondas && L.ORIGENES.rondas.nom === "Rondas de seguridad");
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);
