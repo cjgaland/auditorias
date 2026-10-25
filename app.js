@@ -12,8 +12,11 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.12";
+  const APP_VERSION = "2026.13";
   const NOVEDADES = [
+    { version: "2026.13", fecha: "Octubre 2026", titulo: "Herramientas de apoyo y portal de las apps", cambios: [
+      "En «Acerca de», nuevo grupo «Herramientas de apoyo»: el Anonimizador RGPD (seudonimiza o anonimiza una hoja de cálculo sin que los datos salgan de tu navegador) y el Normalizador Bibliográfico (pon tus referencias en Vancouver, APA y otros estilos).",
+      "Y un enlace al portal cjgaland.github.io, la página que reúne todas las apps y explica cómo encajan."] },
     { version: "2026.12", fecha: "Octubre 2026", titulo: "Traer de Rondas de Seguridad", cambios: [
       "Nueva app hermana Rondas de Seguridad (las rondas de seguridad de una unidad, a pie de cama), enlazada en la portada y en «Acerca de».",
       "Nuevo botón «Traer de Rondas de Seguridad» en «Mis auditorías» y en el paso 1 del Plan Anual: trae los puntos calientes de tus rondas (lo que no se cumple en 2 de las 3 últimas rondas o en todas las de un turno) como criterios de una auditoría nueva o como una auditoría del plan, con su dato. Funciona en este navegador o con la copia .json de Rondas.",
