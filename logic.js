@@ -150,6 +150,7 @@
     incidente: { nom: "Incidente o notificación", icono: "!", q: "Un incidente, una notificación o una reclamación ha puesto el foco en un proceso.", por: "comprobar si el fallo detectado en un incidente es puntual o se repite en el proceso" },
     indicador: { nom: "Indicador fuera de objetivo", icono: "▼", q: "Un indicador de tu cuadro de mando no alcanza el estándar o empeora.", por: "averiguar qué está fallando detrás de un indicador que no alcanza su estándar" },
     seguimiento: { nom: "Auditoría anterior", icono: "↻", q: "Quieres comprobar si las mejoras de una auditoría previa han funcionado (auditoría de seguimiento).", por: "verificar la eficacia de las acciones de mejora de una auditoría anterior" },
+    evidencia: { nom: "Evidencia científica", icono: "¶", q: "Un artículo que has leído con método recomienda una práctica y quieres saber si se aplica en tu unidad.", por: "comprobar si se aplica en la unidad la práctica que recomienda la evidencia científica" },
     encargo: { nom: "Encargo u objetivo", icono: "◎", q: "La Dirección, un acuerdo de gestión o un objetivo de la unidad lo pide.", por: "dar respuesta a un objetivo de la unidad o a un encargo de la Dirección" }
   };
   const TIPOS_AUD = { interna: "Interna", externa: "Externa" };
@@ -176,6 +177,21 @@
       planId: "", entradaId: "", hitos: nuevosHitos(), diseno: nuevoDiseno(), control: nuevoControl(), ejecucion: nuevaEjecucion(), informe: nuevoInforme(), mejora: nuevaMejora(), seguimientoDe: "",
       criterios: [], creado: fecha, modificado: fecha
     };
+  }
+
+  // «Traer de Lectura Crítica»: origen «evidencia», la evidencia en el detalle del origen y un criterio sacado de la PICO
+  function criterioDeLectura(x) {
+    const i = x.pico.i.trim(), p = x.pico.p.trim();
+    return i ? (p ? `En ${p.charAt(0).toLowerCase() + p.slice(1)}, se aplica: ${i}` : `Se aplica: ${i}`).slice(0, 1000) : "";
+  }
+  function aplicarLectura(a, x, genId) {
+    const s = textoEvidenciaLC(x);
+    a.origen.tipo = "evidencia";
+    if (!a.origen.detalle.includes(s)) a.origen.detalle = ((lleno(a.origen.detalle) ? a.origen.detalle.trim() + "\n" : "") + s).slice(0, 2000);
+    const criterio = criterioDeLectura(x);
+    if (a.criterios.some(c => lleno(criterio) && c.criterio === criterio)) return null;
+    const c = Object.assign(nuevoCriterio(genId()), { hallazgo: (x.mensaje || x.pregunta).slice(0, 1000), criterio });
+    a.criterios.push(c); return c;
   }
 
   // Crea los criterios de una auditoría a partir de los hallazgos clave elegidos en un mapa
@@ -1500,7 +1516,47 @@
     return { estilos: ESTILOS_XLSX, hojas: [{ nombre: "Mapa de Riesgos", filas, opciones: { anchoColumnas: [8, 22, 34, 30, 30, 5, 5, 5, 7, 10, 28, 7, 34, 30, 30], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 } } }] };
   }
 
+  // ---------- «Traer de Lectura Crítica» (paquete «lecturacritica-lecturas» v1) ----------
+  // Lee localStorage["lecturacritica-intercambio"] o la copia .json de Lectura Crítica (clave «intercambio»).
+  // Mismo código en AMFE, DAFO, Auditorías e Indicadores. Se copia como texto: no hay vínculo vivo.
+  const FORMATO_LC = "lecturacritica-lecturas", VERSION_LC = 1;
+  const DECISION_LC = { aplicar: "Aplicar", esperar: "Esperar", descartar: "Descartar" };
+  function lecturasDe(o) {
+    if (o && typeof o === "object" && !o.formato && o.intercambio && typeof o.intercambio === "object") o = o.intercambio;
+    if (!o || typeof o !== "object" || o.formato !== FORMATO_LC || !Array.isArray(o.lecturas)) return { error: "formato" };
+    if (o.version !== VERSION_LC) return { error: "version" };
+    const t = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : typeof v === "number" && isFinite(v) ? String(v) : "";
+    const nm = v => typeof v === "number" && isFinite(v) ? v : null;
+    const ok = v => typeof v === "string" && v.trim() !== "";
+    const lecturas = o.lecturas.slice(0, 500).filter(x => x && typeof x === "object" && typeof x.id === "string" && !/^ej-/.test(x.id)).map(x => {
+      const p = x.pico && typeof x.pico === "object" ? x.pico : {};
+      const rc = Array.isArray(x.resultadosClave) ? x.resultadosClave.filter(r => r && typeof r === "object").slice(0, 5)
+        .map(r => ({ desenlace: t(r.desenlace, 300), medida: t(r.medida, 40), valor: nm(r.valor), icInf: nm(r.icInf), icSup: nm(r.icSup), texto: t(r.texto, 600) })) : [];
+      return {
+        id: t(x.id, 80), titulo: t(x.titulo, 500), cita: t(x.cita, 1500), doi: t(x.doi, 200), pmid: t(x.pmid, 30), url: t(x.url, 500), anio: t(x.anio, 10),
+        pregunta: t(x.pregunta, 1200), pico: { p: t(p.p, 600), i: t(p.i, 600), c: t(p.c, 600), o: t(p.o, 600) }, tipoNombre: t(x.tipoNombre, 120),
+        decision: DECISION_LC[x.decision] ? x.decision : "", motivo: t(x.motivo, 2000), resultadosClave: rc, mensaje: t(x.mensaje, 2000), fecha: t(x.fecha, 20)
+      };
+    }).filter(x => ok(x.titulo) || ok(x.cita));
+    return { lecturas };
+  }
+  // La referencia en una línea (la cita si la hay; si no, título, año y DOI)
+  const referenciaLC = x => (x.cita || [x.titulo, x.anio, x.doi ? "doi: " + x.doi : ""].filter(Boolean).join(". ")).replace(/\s+/g, " ").trim();
+  // Texto que se copia: referencia, tipo de estudio, resultado principal, mensaje y decisión
+  function textoEvidenciaLC(x) {
+    const punto = s => /[.!?…]$/.test(s) ? s : s + ".";
+    const r = x.resultadosClave.map(y => y.texto).filter(Boolean);
+    return [
+      punto("Evidencia: " + referenciaLC(x).replace(/\.$/, "") + (x.tipoNombre ? ` (${x.tipoNombre.charAt(0).toLowerCase() + x.tipoNombre.slice(1)})` : "")),
+      ...r.map(s => punto("Resultado: " + s)),
+      x.mensaje ? punto(x.mensaje) : "",
+      x.decision ? `Decisión tras la lectura crítica: ${DECISION_LC[x.decision].toLowerCase()}.` : ""
+    ].filter(Boolean).join(" ");
+  }
+
   const API = {
+    FORMATO_LC, VERSION_LC, DECISION_LC, lecturasDe, referenciaLC, textoEvidenciaLC,
+    criterioDeLectura, aplicarLectura,
     VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,

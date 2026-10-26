@@ -420,5 +420,19 @@ eq("Rondas → Plan Anual: una entrada con sus hallazgos", [entR.titulo, entR.ha
 t("Rondas → Plan Anual: la entrada pasa el saneado del plan", L.sanearDatos({ planes: [Object.assign(L.nuevoPlan("p1", "x"), { entradas: [entR] })] }, gid, "x").planes[0].entradas[0].hallazgos === entR.hallazgos);
 t("Rondas: origen nuevo en la lista de orígenes", L.ORIGENES.rondas && L.ORIGENES.rondas.nom === "Rondas de seguridad");
 
+// «Traer de Lectura Crítica»: origen «evidencia», evidencia en el detalle y un criterio desde la PICO
+{
+  const x = L.lecturasDe({ formato: "lecturacritica-lecturas", version: 1, lecturas: [{ id: "l1", titulo: "Lista de verificación en el triaje", cita: "Autor A, et al. Emerg Med J. 2024;41:100-6.", tipoNombre: "Ensayo clínico", decision: "aplicar", pico: { p: "Pacientes que llegan a Urgencias", i: "lista de verificación digital antes de cerrar el triaje", c: "", o: "" }, resultadosClave: [], mensaje: "La lista digital reduce los triajes incompletos." }] }).lecturas[0];
+  const au = L.nuevaAuditoria("a1", "2026-10-26");
+  const c = L.aplicarLectura(au, x, gid);
+  t("Lectura Crítica: origen evidencia", au.origen.tipo === "evidencia" && L.ORIGENES.evidencia.nom === "Evidencia científica");
+  t("Lectura Crítica: la evidencia va al detalle del origen", au.origen.detalle.startsWith("Evidencia: Autor A, et al. Emerg Med J. 2024;41:100-6 (ensayo clínico)."));
+  eq("Lectura Crítica: criterio desde la PICO", c.criterio, "En pacientes que llegan a Urgencias, se aplica: lista de verificación digital antes de cerrar el triaje");
+  t("Lectura Crítica: el mensaje como hallazgo", c.hallazgo === "La lista digital reduce los triajes incompletos.");
+  t("Lectura Crítica: no repite el criterio ni el detalle", L.aplicarLectura(au, x, gid) === null && au.criterios.length === 1 && au.origen.detalle.split("Evidencia:").length === 2);
+  t("Lectura Crítica: pasa el saneado", L.sanearDatos({ auditorias: [au] }, gid, "x").auditorias[0].origen.tipo === "evidencia");
+  t("Lectura Crítica: sin intervención, criterio vacío", L.criterioDeLectura(Object.assign({}, x, { pico: { p: "", i: "", c: "", o: "" } })) === "");
+}
+
 console.log(`${ok} pruebas correctas${fallos ? `, ${fallos} FALLIDAS` : ""}.`);
 process.exit(fallos ? 1 : 0);
