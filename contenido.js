@@ -135,7 +135,9 @@
         "Según lo que miden: de <b>estructura</b> (lo que se tiene), <b>proceso</b> (lo que se hace) y <b>resultado</b> (lo que se logra).",
         "Un buen indicador es <b>SMART</b>, válido, fiable y útil.",
         "Su ficha define <b>numerador, denominador, fuente, estándar</b> y periodicidad.",
+        // [eco]
         "Para diseñarlos a fondo tienes la app hermana <b>Indicadores</b>."
+        // [/eco]
       ],
       secciones: [
         { t: "1 · Del criterio al indicador", h: `
@@ -159,7 +161,12 @@
           ${practica("En esta app definirás un indicador por cada criterio de la auditoría (fase de Diseño). Si quieres trabajarlos con más detalle —calidad SMART, pilotaje, compuestos— usa la app <b>Indicadores</b> y luego impórtalos.")}` }
       ],
       minicaso: `<p>Para el riesgo «no colocación de la pulsera identificativa» en triaje, el criterio es «todos los pacientes están identificados con pulsera antes de pasar a box o a pruebas». El indicador: <b>% de pacientes triados con pulsera colocada antes del paso a box</b> = pacientes con pulsera ÷ pacientes triados × 100, por observación directa y registro de triaje, con un estándar ≥ 95 %.</p>`,
+      // [eco]
       practica: { texto: "Abrir la app Indicadores ↗", href: "https://cjgaland.github.io/indicadores-calidad/", fuera: true }
+      // [/eco]
+      /* [ind]
+      practica: { texto: "Ver los indicadores del ejemplo de Urgencias", href: "#/ejemplos" }
+      [/ind] */
     },
     {
       n: 4, titulo: "Evidencias, instrumentos y muestra", sub: "Cómo se recogen las pruebas y cuántos casos revisar", pdca: "H", fase: "hacer",
@@ -210,7 +217,7 @@
           <p>El <b>LQAS</b> (muestreo para la aceptación de lotes) no mide cuánto se cumple: funciona como un <b>semáforo</b>. Se fijan el <b>estándar</b> (lo que queremos mantener), el <b>umbral</b> (la línea roja) y los errores aceptados; unas tablas dan <b>n</b> (casos a revisar) y <b>c</b> (cumplimientos mínimos). Si en los n casos hay c o más cumplimientos, se acepta; si hay menos, hay que investigar.</p>
           ${ejemplo("registro del dolor en triaje", "<p>Estándar 85 %, umbral 60 %, α = 5 %, β = 20 % → <b>n = 16, c = 11</b>. Si hay 12 historias con el dolor registrado, se acepta; si hay 10, hay que investigar.</p>")}
           ${trampa("Con pocas historias, un porcentaje por debajo del estándar <b>no basta</b> para afirmar el «no cumple»: con 16 de 20 (80 %) el valor real puede estar entre el 62 % y el 98 %. Decide con LQAS o amplía la muestra.")}
-          <p>Para hacer estos cálculos con tus datos tienes la app hermana <a href="https://cjgaland.github.io/tamano-muestral/" target="_blank" rel="noopener">Tamaño Muestral ↗</a>.</p>` },
+          <p>Para hacer estos cálculos con tus datos tienes <!--[eco]-->la app hermana <a href="https://cjgaland.github.io/tamano-muestral/" target="_blank" rel="noopener">Tamaño Muestral ↗</a><!--[/eco]--><!--[ind]la calculadora <a href="tamano-muestral/" target="_blank" rel="noopener">Tamaño Muestral ↗</a>, incluida en esta app[/ind]-->.</p>` },
         { t: "7 · Buenas prácticas", h: `
           <ul><li><b>Planifica</b> qué información necesitas, con qué instrumento, quién la recoge, cuándo, y de qué universo y con qué muestra.</li>
           <li><b>Registra</b> en el momento y de forma estructurada, sin interpretaciones.</li>
@@ -219,7 +226,12 @@
           <li><b>Custodia</b> la documentación para la auditoría de seguimiento.</li></ul>` }
       ],
       minicaso: `<p>Para verificar la higiene de manos en un Hospital de Día se combinan: <b>documentales</b> (registros de formación de los últimos 12 meses y consumo de solución hidroalcohólica), <b>observación directa</b> con lista de verificación en turnos y días elegidos al azar (muestreo estratificado, para no observar solo los momentos tranquilos) y <b>entrevistas</b> breves sobre las barreras para cumplir. Todo se anota en una matriz de hallazgos y se valida con los responsables de la unidad.</p>`,
+      // [eco]
       practica: { texto: "Abrir Tamaño Muestral ↗", href: "https://cjgaland.github.io/tamano-muestral/", fuera: true }
+      // [/eco]
+      /* [ind]
+      practica: { texto: "Abrir Tamaño Muestral ↗", href: "tamano-muestral/", fuera: true }
+      [/ind] */
     },
     {
       n: 5, titulo: "El informe de resultados", sub: "Interpretar, redactar y comunicar", pdca: "V", fase: "verificar",

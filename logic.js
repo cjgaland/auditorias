@@ -9,6 +9,7 @@
   "use strict";
 
   const VERSION_DATOS = 1;
+  // [eco]
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
@@ -17,6 +18,11 @@
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
   const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
   const URL_LC = "https://cjgaland.github.io/lectura-critica/";
+  // [/eco]
+  // En la edición independiente, Tamaño Muestral va dentro, en su subcarpeta
+  /* [ind]
+  const URL_TM = "tamano-muestral/";
+  [/ind] */
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1557,7 +1563,11 @@
   const API = {
     FORMATO_LC, VERSION_LC, DECISION_LC, lecturasDe, referenciaLC, textoEvidenciaLC,
     criterioDeLectura, aplicarLectura,
-    VERSION_DATOS, URL_TM, URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC, NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
+    VERSION_DATOS, URL_TM,
+    // [eco]
+    URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC,
+    // [/eco]
+    NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
     ipr, iprDe, nivelIPR, ordenarRiesgos, puestos, resumenMapa, avisosMapa, sugerirMotivo, parsearTabla,
     nuevoMapa, nuevoRiesgo, nuevoCriterio, nuevaAuditoria, criteriosDesdeRiesgos, deArt, sugerirTitulo, sugerirObjetivo, progresoInicio, siguientePaso,

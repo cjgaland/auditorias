@@ -14,6 +14,7 @@
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
   const APP_VERSION = "2026.17";
   const NOVEDADES = [
+    // [eco]
     { version: "2026.17", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
       "Nuevo origen «Evidencia científica»: con «Traer de Lectura Crítica» la evidencia de un artículo que hayas leído con esa app queda como origen de la auditoría, y su pregunta PICO se convierte en un criterio («En…, se aplica: …») que puedes ajustar. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.16", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
@@ -42,6 +43,19 @@
       "Los datos se copian: si el AMFE cambia, se vuelve a traer."] },
     { version: "2026.08", fecha: "Octubre 2026", titulo: "Nueva app hermana: AMFE", cambios: [
       "Enlace a la nueva app hermana AMFE (Análisis Modal de Fallos y Efectos) en la portada y en «Acerca de»: analiza los fallos de un proceso, puntúa G·O·D e IPR y decide cuáles priorizar."] },
+    // [/eco]
+    /* [ind]
+    { version: "2026.17", fecha: "Octubre 2026", titulo: "Evidencia de Lectura Crítica", cambios: [
+      "Nuevo origen «Evidencia científica»: con «Cargar archivo de Lectura Crítica» la evidencia de un artículo leído con la app Lectura Crítica (desde su copia de seguridad .json) queda como origen de la auditoría, y su pregunta PICO se convierte en un criterio («En…, se aplica: …») que puedes ajustar. Avisa si la decisión fue esperar o descartar."] },
+    { version: "2026.12", fecha: "Octubre 2026", titulo: "Cargar archivo de Rondas de Seguridad", cambios: [
+      "Nuevo botón «Cargar archivo de Rondas de Seguridad» en «Mis auditorías» y en el paso 1 del Plan Anual: con la copia de seguridad (.json) de la app Rondas de Seguridad, trae los puntos calientes (lo que no se cumple en 2 de las 3 últimas rondas o en todas las de un turno) como criterios de una auditoría nueva o como una auditoría del plan, con su dato.",
+      "Nuevo origen de una auditoría: «Rondas de seguridad»."] },
+    { version: "2026.11", fecha: "Octubre 2026", titulo: "Cargar archivo de Mapa de Riesgos", cambios: [
+      "Nuevo botón «Cargar archivo de Mapa de Riesgos» en el Mapa de Riesgos: con la copia de seguridad (.json) de la app Mapa de Riesgos, crea un mapa con los fallos y los hallazgos clave, con la acción, el indicador y el motivo ya preparados para auditar."] },
+    { version: "2026.09", fecha: "Octubre 2026", titulo: "Cargar archivo de AMFE", cambios: [
+      "Nuevo botón «Cargar archivo de AMFE» en el Mapa de Riesgos: con la copia de seguridad (.json) de la app AMFE, crea un mapa con los fallos, sus G·O·D y las medidas actuales.",
+      "Los fallos prioritarios llegan como hallazgos clave, con la acción de mejora, el indicador como evidencia esperada y el motivo de elección."] },
+    [/ind] */
     { version: "2026.07", fecha: "Octubre 2026", titulo: "El método, lo primero del diseño", cambios: [
       "El diseño de cada auditoría empieza ahora por la metodología (población, periodo, fuentes, método, equipo y recursos), porque de ella dependen los indicadores, las evidencias y la muestra.",
       "Explicación fácil de cada elemento del método."] },
@@ -258,6 +272,7 @@
         <a class="guide-card" href="#/aprende"><span class="guide-num">?</span><div><div class="guide-q">Aprende</div><div class="guide-a">Seis temas <b>explicados fácil</b>: de qué es una auditoría al seguimiento de las mejoras.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/prueba"><span class="guide-num">✓</span><div><div class="guide-q">Ponte a prueba</div><div class="guide-a">${C.TEST.length} preguntas con su <b>explicación</b>, cinco por tema.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
+        <!-- [eco] -->
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña y comprueba</b> los indicadores de tu auditoría.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">IPR</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: <b>analiza los fallos de un proceso</b> (G·O·D e IPR) y decide cuáles priorizar antes de auditar.</div></div><span class="guide-go">›</span></a>
@@ -266,6 +281,10 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO; sus debilidades y amenazas te dicen qué conviene auditar.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad; tráete aquí lo que falla una y otra vez para auditarlo.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_LC}" target="_blank" rel="noopener"><span class="guide-num">LC</span><div><div class="guide-q">Lectura Crítica ↗</div><div class="guide-a">App hermana: <b>lee críticamente un artículo</b> para comprobar la evidencia del criterio o del estándar que vas a auditar.</div></div><span class="guide-go">›</span></a>
+        <!-- [/eco] -->
+        <!-- [ind]
+        <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">Calculadora incluida: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>
+        [/ind] -->
       </div>
       ${practica("<b>Protección de datos:</b> nunca escribas en la app nombres de pacientes ni números de historia clínica. Usa códigos (HC-01, HC-02…) y guarda la correspondencia, si la necesitas, en un lugar autorizado de tu centro.")}`;
   }
@@ -399,22 +418,32 @@
   // copia .json. Las dos acaban en L.mapaDesdeAmfe (el paquete de Mapa de Riesgos lleva dentro un AMFE con la forma de «amfe-fallos»).
   // traerAbierto = false | "amfe" | "mr"
   const FUENTES = {
-    amfe: { nom: "AMFE", titulo: "Traer un AMFE", clave: "amfe-intercambio", leer: o => L.leerAmfe(o), url: () => L.URL_AMFE, cosa: "el AMFE", propio: "ningún AMFE propio" },
-    mr: { nom: "Mapa de Riesgos", titulo: "Traer de Mapa de Riesgos", clave: "mapariesgos-intercambio", leer: o => L.leerMapaRiesgos(o), url: () => L.URL_MAPA, cosa: "el mapa", propio: "ningún mapa propio con AMFE" }
+    amfe: { nom: "AMFE", titulo: "Traer un AMFE", /*[eco]*/clave: "amfe-intercambio", /*[/eco]*/leer: o => L.leerAmfe(o), /*[eco]*/url: () => L.URL_AMFE, /*[/eco]*/cosa: "el AMFE", propio: "ningún AMFE propio" },
+    mr: { nom: "Mapa de Riesgos", titulo: "Traer de Mapa de Riesgos", /*[eco]*/clave: "mapariesgos-intercambio", /*[/eco]*/leer: o => L.leerMapaRiesgos(o), /*[eco]*/url: () => L.URL_MAPA, /*[/eco]*/cosa: "el mapa", propio: "ningún mapa propio con AMFE" }
   };
   function amfeDisponible() {
     const F = FUENTES[traerAbierto] || FUENTES.amfe;
     if (amfeCopia) return Object.assign({ origen: "copia" }, amfeCopia);
+    // [eco]
     const bruto = leer(F.clave);
     if (!bruto) return { origen: "nada" };
     let o = null; try { o = JSON.parse(bruto); } catch (e) { /* */ }
     return Object.assign({ origen: "navegador" }, F.leer(o));
+    // [/eco]
+    /* [ind]
+    return { origen: "nada" };
+    [/ind] */
   }
   function traerHtml() {
     const F = FUENTES[traerAbierto] || FUENTES.amfe, d = amfeDisponible(), lista = d.amfes || [];
     const cargar = `<button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="amfe-archivo">Cargar la copia .json de ${F.nom}</button>`;
     let cuerpo;
+    // [eco]
     if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de ${F.nom} en este navegador. Si has hecho ${F.cosa} en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no lo tienes, hazlo en la app <a href="${F.url()}" target="_blank" rel="noopener">${F.nom} ↗</a>.</div>`;
+    // [/eco]
+    /* [ind]
+    if (d.origen === "nada") cuerpo = `<div class="note">ℹ Elige la copia de seguridad (.json) de la app ${F.nom}.</div>`;
+    [/ind] */
     else if (d.error) cuerpo = avisoHtml({ nivel: "error", texto: d.error });
     else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : `La app ${F.nom} de este navegador`} no tiene ${F.propio} todavía (los ejemplos no se comparten).</div>`;
     else cuerpo = `<p class="field-sub">${d.origen === "copia" ? "De la copia cargada" : `Guardados en la app ${F.nom} de este navegador`}${d.generado ? ` · actualizados el ${esc(fechaCorta(d.generado))}` : ""}. Elige cuál traer:</p>
@@ -426,7 +455,7 @@
       <h3 class="sub-h">${F.titulo}</h3>
       <p class="field-sub">Se crea un <b>mapa nuevo</b> con los fallos, sus G·O·D y las medidas actuales; los fallos prioritarios quedan como hallazgos clave. Los datos <b>se copian</b>: si después cambian en ${F.nom}, vuelve a traerlos.</p>
       ${cuerpo}
-      <div class="toolbar">${cargar}${d.origen === "copia" ? `<button class="btn" data-act="amfe-olvidar">Usar los de este navegador</button>` : ""}<button class="btn" data-act="amfe-cerrar">Cancelar</button></div>
+      <div class="toolbar">${cargar}<!--[eco]-->${d.origen === "copia" ? `<button class="btn" data-act="amfe-olvidar">Usar los de este navegador</button>` : ""}<!--[/eco]--><button class="btn" data-act="amfe-cerrar">Cancelar</button></div>
     </div>`;
   }
   function repintarTraer() {
@@ -447,17 +476,27 @@
   const rondasFuera = new Set();
   function rondasDisponible() {
     if (rondasCopia) return Object.assign({ origen: "copia" }, rondasCopia);
+    // [eco]
     const bruto = leer("rondas-intercambio");
     if (!bruto) return { origen: "nada" };
     let o = null; try { o = JSON.parse(bruto); } catch (e) { /* */ }
     return Object.assign({ origen: "navegador" }, L.leerRondas(o));
+    // [/eco]
+    /* [ind]
+    return { origen: "nada" };
+    [/ind] */
   }
   const rondasIds = u => u.calientes.filter(p => !rondasFuera.has(u.id + "|" + p.itemId)).map(p => p.itemId);
   function rondasHtml() {
     const d = rondasDisponible(), lista = d.unidades || [], conPC = lista.filter(u => u.calientes.length), sinPC = lista.filter(u => !u.calientes.length);
     const aud = rondasAbierto === "aud";
     let cuerpo;
+    // [eco]
     if (d.origen === "nada") cuerpo = `<div class="note">ℹ No hay datos de Rondas de Seguridad en este navegador. Si haces las rondas en otro dispositivo o navegador, carga su copia de seguridad (.json). Si aún no la usas, la tienes en <a href="${L.URL_RONDAS}" target="_blank" rel="noopener">Rondas de Seguridad ↗</a>.</div>`;
+    // [/eco]
+    /* [ind]
+    if (d.origen === "nada") cuerpo = `<div class="note">ℹ Elige la copia de seguridad (.json) de la app Rondas de Seguridad.</div>`;
+    [/ind] */
     else if (d.error) cuerpo = avisoHtml({ nivel: "error", texto: d.error });
     else if (!lista.length) cuerpo = `<div class="note">ℹ ${d.origen === "copia" ? "La copia cargada" : "La app Rondas de Seguridad de este navegador"} no tiene ninguna unidad propia todavía (los ejemplos no se comparten).</div>`;
     else if (!conPC.length) cuerpo = `<div class="note">ℹ Ninguna unidad tiene puntos calientes: ningún ítem falla en dos de las tres últimas rondas ni en todas las de un mismo turno. ¡Buena señal! (${esc(lista.map(u => u.unidad || "Unidad sin nombre").join(", "))}).</div>`;
@@ -471,7 +510,7 @@
       <h3 class="sub-h">Traer de Rondas de Seguridad</h3>
       <p class="field-sub">Los <b>puntos calientes</b> son lo que falla una y otra vez en las rondas: lo que no se cumple en 2 de las 3 últimas rondas o en todas las de un mismo turno. ${aud ? "Se crea una <b>auditoría nueva</b> con un criterio por cada uno, para comprobar con una muestra si es un problema del proceso." : "Se añade <b>una auditoría al plan</b> por unidad, con sus puntos calientes como hallazgos."} Los datos <b>se copian</b>: si las rondas cambian, vuelve a traerlos.</p>
       ${cuerpo}
-      <div class="toolbar"><button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="rondas-archivo">Cargar la copia .json de Rondas de Seguridad</button>${d.origen === "copia" ? `<button class="btn" data-act="rondas-olvidar">Usar los de este navegador</button>` : ""}<button class="btn" data-act="rondas-cerrar">Cancelar</button></div>
+      <div class="toolbar"><button class="btn${d.origen === "nada" ? " btn--primary" : ""}" data-act="rondas-archivo">Cargar la copia .json de Rondas de Seguridad</button><!--[eco]-->${d.origen === "copia" ? `<button class="btn" data-act="rondas-olvidar">Usar los de este navegador</button>` : ""}<!--[/eco]--><button class="btn" data-act="rondas-cerrar">Cancelar</button></div>
     </div>`;
   }
   function repintarRondas() {
@@ -664,7 +703,7 @@
         }
       }
     } else if (t === "evidencia") dep = `<div class="toolbar no-print"><button class="btn btn--primary" data-act="aud-lc">📄 Traer de Lectura Crítica</button></div>
-      <p class="field-sub">Trae un artículo que hayas leído con la app <a href="${L.URL_LC}" target="_blank" rel="noopener">Lectura Crítica</a>: su evidencia queda aquí abajo y su pregunta PICO se convierte en un criterio que puedes ajustar.</p>`
+      <p class="field-sub"><!--[eco]-->Trae un artículo que hayas leído con la app <a href="${L.URL_LC}" target="_blank" rel="noopener">Lectura Crítica</a><!--[/eco]--><!--[ind]Carga un artículo de la copia de seguridad (.json) de la app Lectura Crítica[/ind]-->: su evidencia queda aquí abajo y su pregunta PICO se convierte en un criterio que puedes ajustar.</p>`
       + campo(a, "origen.detalle", "Concreta el origen", { area: true, rows: 4, ph: PH_ORIGEN[t], help: "La evidencia que justifica la auditoría. Aparecerá en la introducción del informe." });
     else if (t) dep = campo(a, "origen.detalle", "Concreta el origen", { area: true, rows: 3, ph: PH_ORIGEN[t] || "", help: "Una o dos frases que expliquen por qué se hace esta auditoría. Aparecerá en la introducción del informe." });
     return `<div class="opt-grid opt-grid--3">${cards}</div>${dep}`;
@@ -1124,7 +1163,7 @@
         <li><b>Sentido</b>: si cuentas aciertos, «más es mejor» (≥); si cuentas fallos, «menos es mejor» (≤).</li>
         <li><b>Cumple si…</b> y <b>No aplica si…</b>: la definición operativa. Sin ella, cada auditor interpreta a su manera.</li></ul>
         <p>En la hoja de recogida siempre se marca si el caso <b>cumple el criterio</b> (Sí / No / NA), aunque el indicador cuente fallos.</p>
-        <p>Para trabajar un indicador a fondo (calidad SMART, pilotaje, compuestos) tienes la app <a href="${L.URL_IND}" target="_blank" rel="noopener">Indicadores ↗</a>; luego puedes importarlo aquí.</p>`)}
+        <!--[eco]--><p>Para trabajar un indicador a fondo (calidad SMART, pilotaje, compuestos) tienes la app <a href="${L.URL_IND}" target="_blank" rel="noopener">Indicadores ↗</a>; luego puedes importarlo aquí.</p><!--[/eco]-->`)}
       <div class="toolbar no-print"><button class="btn" data-act="importar-ind">⬆ Importar de la app Indicadores</button>${indImportados.length ? `<span class="field-sub">${plural(indImportados.length, "indicador cargado", "indicadores cargados")}: elígelo en cada criterio.</span>` : ""}</div>
       <div data-zona="avisos-dis">${avisosDisHtml(a, 2)}</div>
       ${a.criterios.map((c, i) => `<div class="crit">${critCab(c, i)}
@@ -2368,11 +2407,17 @@
     else if (a === "pegar-abrir") { pegarAbierto = true; traerAbierto = false; repintarMapa(); const ta = $("#pegar-txt"); if (ta) { ta.scrollIntoView({ block: "center" }); ta.focus(); } }
     else if (a === "pegar-cerrar") { pegarAbierto = false; repintarMapa(); }
     else if (a === "amfe-abrir") { traerAbierto = b.dataset.fuente === "mr" ? "mr" : "amfe"; amfeCopia = null; pegarAbierto = false; repintarTraer(); }
+    /* [ind]
+    if (a === "amfe-abrir") $("#input-amfe").click();
+    [/ind] */
     else if (a === "amfe-cerrar") { traerAbierto = false; amfeCopia = null; repintarTraer(); }
     else if (a === "amfe-olvidar") { amfeCopia = null; repintarTraer(); }
     else if (a === "amfe-archivo") $("#input-amfe").click();
     else if (a === "amfe-traer") traerAmfe(Number(b.dataset.i));
     else if (a === "rondas-abrir") { rondasAbierto = b.dataset.modo === "plan" ? "plan" : "aud"; rondasHash = location.hash; rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
+    /* [ind]
+    if (a === "rondas-abrir") $("#input-rondas").click();
+    [/ind] */
     else if (a === "rondas-cerrar") { rondasAbierto = false; rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
     else if (a === "rondas-olvidar") { rondasCopia = null; rondasFuera.clear(); repintarRondas(); }
     else if (a === "rondas-archivo") $("#input-rondas").click();
@@ -2703,12 +2748,18 @@
   let lcCargadas = null, lcPendiente = null;
   function traerLC(titulo, alElegir) {
     lcPendiente = { titulo, alElegir };
+    // [eco]
     let r = null; try { r = L.lecturasDe(JSON.parse(leer("lecturacritica-intercambio") || "null")); } catch (e) { /* */ }
     const lista = lcCargadas || (r && r.lecturas && r.lecturas.length ? r.lecturas : null);
     if (lista) { elegirLC(lista); return; }
     confirmar(r && r.error === "version" ? "<p>Las lecturas de este navegador son de una versión de <b>Lectura Crítica</b> que esta app aún no sabe leer.</p>"
       : "<p>No hay lecturas de la app <b>Lectura Crítica</b> en este navegador.</p><p>Si las tienes en otro dispositivo, carga su copia de seguridad (.json).</p>",
       "Cargar una copia", () => $("#input-lc").click(), { titulo, peligro: false });
+    // [/eco]
+    /* [ind]
+    if (lcCargadas) { elegirLC(lcCargadas); return; }
+    $("#input-lc").click();
+    [/ind] */
   }
   function elegirLC(lista) {
     const { titulo, alElegir } = lcPendiente, cortar = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
