@@ -12,9 +12,11 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.17";
+  const APP_VERSION = "2026.18";
   const NOVEDADES = [
     // [eco]
+    { version: "2026.18", fecha: "Octubre 2026", titulo: "Nueva app hermana: ACR · Ishikawa", cambios: [
+      "Enlace a la nueva app hermana ACR · Ishikawa en la portada y en «Acerca de»: busca las causas de fondo de un problema o de un incidente con el diagrama de Ishikawa (espina de pescado) y el análisis causa raíz, sin buscar culpables; sus acciones de mejora llevan indicador."] },
     { version: "2026.17", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
       "Nuevo origen «Evidencia científica»: con «Traer de Lectura Crítica» la evidencia de un artículo que hayas leído con esa app queda como origen de la auditoría, y su pregunta PICO se convierte en un criterio («En…, se aplica: …») que puedes ajustar. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.16", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
@@ -281,6 +283,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO; sus debilidades y amenazas te dicen qué conviene auditar.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad; tráete aquí lo que falla una y otra vez para auditarlo.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_LC}" target="_blank" rel="noopener"><span class="guide-num">LC</span><div><div class="guide-q">Lectura Crítica ↗</div><div class="guide-a">App hermana: <b>lee críticamente un artículo</b> para comprobar la evidencia del criterio o del estándar que vas a auditar.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_ACR}" target="_blank" rel="noopener"><span class="guide-num">ACR</span><div><div class="guide-q">ACR · Ishikawa ↗</div><div class="guide-a">App hermana: <b>busca las causas de fondo</b> de un problema o de un incidente (Ishikawa y causa raíz), sin buscar culpables; sus acciones de mejora llevan indicador.</div></div><span class="guide-go">›</span></a>
         <!-- [/eco] -->
         <!-- [ind]
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">Calculadora incluida: <b>cuántos casos revisar</b>, plan LQAS y concordancia entre auditores.</div></div><span class="guide-go">›</span></a>

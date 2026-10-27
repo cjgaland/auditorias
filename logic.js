@@ -18,6 +18,7 @@
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
   const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
   const URL_LC = "https://cjgaland.github.io/lectura-critica/";
+  const URL_ACR = "https://cjgaland.github.io/acr-ishikawa/";
   // [/eco]
   // En la edición independiente, Tamaño Muestral va dentro, en su subcarpeta
   /* [ind]
@@ -1565,7 +1566,7 @@
     criterioDeLectura, aplicarLectura,
     VERSION_DATOS, URL_TM,
     // [eco]
-    URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC,
+    URL_IND, URL_AMFE, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC, URL_ACR,
     // [/eco]
     NIVELES_IPR, ORIGENES, TIPOS_AUD, OBJETOS_AUD, FASES, PDCA,
     lleno, sinTildes, num, nfmt, entero1a10, corto,
