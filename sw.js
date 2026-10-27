@@ -4,7 +4,7 @@
 //  Al cambiar cualquier archivo, incrementa CACHE_NAME.
 // ============================================================
 
-const CACHE_NAME = "auditorias-v18";
+const CACHE_NAME = "auditorias-v19";
 
 const ASSETS = [
   "./",
